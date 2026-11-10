@@ -240,3 +240,47 @@ footer p {
 #cameraMode[aria-pressed="true"] {
   border-color: #c5ed80;
 }
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.menu-grid button {
+  font-size: 12px;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.lobby-row,
+.room-player {
+  padding: 12px 0;
+  border-bottom: 1px solid #ffffff22;
+  font-size: 12px;
+}
+.lobby-row button {
+  width: auto;
+  padding: 8px 18px;
+  display: block;
+}
+#shareCode {
+  font: 800 28px monospace;
+  letter-spacing: 6px;
+  text-align: center;
+}
+#roomError {
+  color: #ffb09c;
+}
+#lobbyInfo,
+#leaveGame {
+  pointer-events: auto;
+  width: auto;
+  padding: 9px;
+  margin: 0;
+  font-size: 10px;
+}
+header {
+  flex-wrap: wrap;
+  gap: 12px;
+}

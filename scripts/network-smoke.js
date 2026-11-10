@@ -3,6 +3,7 @@ import { io } from "socket.io-client";
 import assert from "node:assert/strict";
 const url = process.argv[2] || "http://127.0.0.1:3000",
   clients = [];
+let lobbyId;
 const wait = (socket, predicate, timeout = 35000) =>
   new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -29,12 +30,23 @@ async function join(name) {
     socket.once("connect", resolve);
     socket.once("connect_error", reject);
   });
-  await new Promise((resolve) => socket.emit("join", name, resolve));
+  const result = await new Promise((resolve) =>
+    socket.emit(
+      lobbyId ? "joinPublic" : "createLobby",
+      lobbyId
+        ? { lobbyId, nickname: name }
+        : { nickname: name, visibility: "public", name: "Network smoke" },
+      resolve,
+    ),
+  );
+  assert(!result.error, result.error);
+  lobbyId = result.lobby.id;
   return socket;
 }
 try {
   const a = await join("Smoke A"),
     b = await join("Smoke B");
+  await new Promise((resolve) => a.emit("startGame", {}, resolve));
   const s = await wait(a, (s) => s.phase === "hiding");
   assert.equal(s.counts.seekers, 1);
   assert.equal(s.counts.hiders, 1);

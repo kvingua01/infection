@@ -1,8 +1,20 @@
 import * as THREE from "three";
 import { createMap, solid } from "/shared/maps.js";
 const $ = (id) => document.getElementById(id),
-  socket = io(),
+  socket = io({ auth: { sessionId: tabSession() } }),
   canvas = $("world");
+function tabSession() {
+  try {
+    let id = sessionStorage.getItem("infectionSession");
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem("infectionSession", id);
+    }
+    return id;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
@@ -205,35 +217,232 @@ function renderItems() {
     }
   }
 }
-$("form").onsubmit = (e) => {
-  e.preventDefault();
+let currentLobby = null,
+  publicLobbies = [],
+  roomPanelOpen = false,
+  lobbyPending = false,
+  lobbyRequestVersion = 0;
+function lobbyError(message) {
+  $("connection").textContent = message;
+  $("roomError").textContent = message;
+}
+function nickname() {
+  if (!$("form").reportValidity()) return null;
+  const value = $("nickname").value.trim();
+  if (!value) lobbyError("Enter a nickname first.");
+  return value;
+}
+function lobbyAction(event, data, onSuccess) {
+  if (lobbyPending) return;
   if (!socket.connected) {
-    $("connection").textContent = "Connection unavailable. Reconnecting…";
+    lobbyError("Connection unavailable. Reconnecting…");
     return;
   }
-  socket.emit("join", $("nickname").value, (r) => {
-    if (r.error) {
-      $("connection").textContent = r.error;
+  lobbyPending = true;
+  const requestVersion = lobbyRequestVersion;
+  lobbyError("");
+  socket.timeout(6000).emit(event, data, (error, result) => {
+    if (requestVersion !== lobbyRequestVersion) return;
+    lobbyPending = false;
+    if (error || result?.error) {
+      lobbyError(result?.error || "Request timed out. Try again.");
       return;
     }
-    myId = r.id;
-    $("join").hidden = true;
-    $("hud").hidden = false;
-    requestMouseLock();
+    onSuccess?.(result);
   });
+}
+function enterLobby(result) {
+  myId = result.id;
+  currentLobby = result.lobby;
+  roomPanelOpen = true;
+  $("join").hidden = true;
+  showScores = false;
+  updateLobbyView();
+}
+function resetLobby() {
+  lobbyPending = false;
+  lobbyRequestVersion++;
+  myId = null;
+  state = null;
+  currentLobby = null;
+  keys = {};
+  queuedJump = false;
+  showScores = false;
+  roomPanelOpen = false;
+  document.exitPointerLock();
+  for (const g of models.values()) {
+    actors.remove(g);
+    disposeObject(g);
+  }
+  models.clear();
+  clear(items);
+  $("hud").hidden = true;
+  $("scores").hidden = true;
+  $("waitingRoom").hidden = true;
+  $("join").hidden = false;
+}
+function leaveLobby() {
+  lobbyAction("leaveLobby", {}, resetLobby);
+}
+function updateLobbyView() {
+  if (!currentLobby) return;
+  const room = currentLobby,
+    waiting = room.phase === "lobby";
+  if (waiting) roomPanelOpen = true;
+  if (roomPanelOpen) {
+    keys = {};
+    queuedJump = false;
+  }
+  $("waitingRoom").hidden = !roomPanelOpen;
+  $("hud").hidden = waiting;
+  $("roomType").textContent = room.visibility.toUpperCase() + " LOBBY";
+  $("roomName").textContent = room.name;
+  $("privateRoomCode").hidden = room.visibility !== "private";
+  $("shareCode").value = room.code || "";
+  $("roomCount").textContent =
+    `${room.playerCount}/${room.maxPlayers} players · Host: ${room.host}`;
+  $("roomPlayers").replaceChildren();
+  for (const player of room.players) {
+    const row = document.createElement("div");
+    row.className = "room-player";
+    row.textContent =
+      player.name +
+      (player.isHost ? " · HOST" : "") +
+      (player.id === myId ? " · YOU" : "");
+    $("roomPlayers").append(row);
+  }
+  $("startGame").hidden = room.hostId !== myId || !waiting;
+  $("startGame").disabled = room.playerCount < 2;
+  $("watchGame").hidden = waiting;
+  $("watchGame").textContent = "View Game";
+  $("roomStatus").textContent = waiting
+    ? room.playerCount < 2
+      ? "Waiting for at least 2 players."
+      : room.hostId === myId
+        ? "Your lobby is ready. Start when everyone has joined."
+        : "Waiting for the host to start."
+    : "Game in progress. Late arrivals join the next round.";
+  $("lobbyInfo").textContent = room.name + " · " + room.playerCount + "/12";
+}
+function renderPublicLobbies() {
+  $("publicList").replaceChildren();
+  if (!publicLobbies.length) {
+    $("publicList").textContent = "No public lobbies yet. Create one!";
+    return;
+  }
+  for (const room of publicLobbies) {
+    const row = document.createElement("div");
+    row.className = "lobby-row";
+    const text = document.createElement("span");
+    text.textContent = `${room.name} · Host: ${room.host} · ${room.playerCount}/${room.maxPlayers} · ${room.phase === "lobby" ? "WAITING" : "PLAYING"}${room.status === "full" ? " · FULL" : ""}`;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "Join";
+    button.disabled = room.playerCount >= room.maxPlayers;
+    button.onclick = () => {
+      const name = nickname();
+      if (name)
+        lobbyAction(
+          "joinPublic",
+          { nickname: name, lobbyId: room.id },
+          enterLobby,
+        );
+    };
+    row.append(text, button);
+    $("publicList").append(row);
+  }
+}
+$("form").onsubmit = (event) => event.preventDefault();
+for (const [id, visibility] of [
+  ["createPublic", "public"],
+  ["createPrivate", "private"],
+])
+  $(id).onclick = () => {
+    const name = nickname();
+    if (name)
+      lobbyAction(
+        "createLobby",
+        { nickname: name, name: $("lobbyName").value, visibility },
+        enterLobby,
+      );
+  };
+$("browsePublic").onclick = () => {
+  if (!nickname()) return;
+  $("publicBrowser").hidden = false;
+  $("privateBrowser").hidden = true;
+  renderPublicLobbies();
 };
+$("browsePrivate").onclick = () => {
+  if (!nickname()) return;
+  $("privateBrowser").hidden = false;
+  $("publicBrowser").hidden = true;
+  $("privateCode").focus();
+};
+$("privateCode").oninput = () =>
+  ($("privateCode").value = $("privateCode").value.toUpperCase());
+$("joinPrivate").onclick = () => {
+  const name = nickname();
+  if (name)
+    lobbyAction(
+      "joinPrivate",
+      { nickname: name, code: $("privateCode").value },
+      enterLobby,
+    );
+};
+$("startGame").onclick = () =>
+  lobbyAction("startGame", {}, (result) => {
+    currentLobby = result.lobby;
+    roomPanelOpen = false;
+    updateLobbyView();
+  });
+for (const id of ["leaveRoom", "leaveGame", "leaveScores"])
+  $(id).onclick = leaveLobby;
+$("watchGame").onclick = () => {
+  roomPanelOpen = false;
+  updateLobbyView();
+  requestMouseLock();
+};
+$("lobbyInfo").onclick = () => {
+  document.exitPointerLock();
+  roomPanelOpen = true;
+  updateLobbyView();
+};
+$("copyCode").onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(currentLobby.code);
+    $("roomError").textContent = "Code copied!";
+  } catch {
+    $("shareCode").select();
+    $("roomError").textContent = "Press Ctrl+C to copy the selected code.";
+  }
+};
+socket.on("lobbies", (rooms) => {
+  publicLobbies = rooms;
+  renderPublicLobbies();
+});
+socket.on("lobby", (room) => {
+  if (!currentLobby || room.id !== currentLobby.id) return;
+  if (room.phase === "hiding" && currentLobby.phase !== "hiding")
+    roomPanelOpen = false;
+  currentLobby = room;
+  updateLobbyView();
+});
+socket.on("sessionReplaced", () =>
+  lobbyError(
+    "This tab was replaced by another connection. Rejoin to continue.",
+  ),
+);
 socket.on("disconnect", () => {
+  resetLobby();
   $("error").hidden = false;
   $("error").textContent =
-    "Connection lost. Rejoin after reconnection; active-round arrivals wait until the next round.";
-  myId = null;
-  $("join").hidden = false;
-  $("hud").hidden = true;
+    "Disconnected. Rejoin your lobby after reconnecting; active-round arrivals wait for the next round.";
 });
 socket.on("connect", () => {
   $("error").hidden = true;
 });
 socket.on("state", (s) => {
+  if (!myId) return;
   state = s;
   if (s.map !== mapIndex) loadMap(s.map);
   const me = s.players.find((p) => p.id === myId);
@@ -305,7 +514,8 @@ socket.on("state", (s) => {
         : me?.role === "waiting"
           ? "SPECTATING · JOINING NEXT ROUND"
           : "";
-  $("scores").hidden = !(showScores || s.phase === "intermission");
+  $("scores").hidden =
+    roomPanelOpen || !(showScores || s.phase === "intermission");
   $("result").textContent =
     s.phase === "intermission" ? s.result : "SCOREBOARD";
   $("scoreRows").replaceChildren();
@@ -375,7 +585,8 @@ document.addEventListener("mousemove", (e) => {
   pitch = Math.max(-0.65, Math.min(1.2, pitch + e.movementY * 0.0025));
 });
 addEventListener("keydown", (e) => {
-  if (document.activeElement.tagName === "INPUT") return;
+  if (document.activeElement.tagName === "INPUT" || !myId || roomPanelOpen)
+    return;
   if (["Space", "Tab"].includes(e.code)) e.preventDefault();
   keys[e.code] = true;
   if (e.code === "Space") queuedJump = true;

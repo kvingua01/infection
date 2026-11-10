@@ -8,6 +8,7 @@ const browser = await chromium.launch({
     : {}),
   args: [
     "--no-sandbox",
+    "--disable-dev-shm-usage",
     "--use-angle=swiftshader",
     "--enable-unsafe-swiftshader",
   ],
@@ -48,9 +49,23 @@ try {
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(process.argv[2] || "http://127.0.0.1:3000");
     await page.fill("#nickname", "Camera check " + n);
-    await page.locator("#form button").click();
+    if (n === 0) {
+      await page.fill("#lobbyName", "Camera regression");
+      await page.click("#createPublic");
+    } else {
+      await page.click("#browsePublic");
+      await page
+        .locator(".lobby-row")
+        .filter({ hasText: "Camera regression" })
+        .getByRole("button", { name: "Join", exact: true })
+        .click();
+    }
   }
-  await pages[0].waitForFunction(() => window.testState?.phase === "hiding");
+  await pages[0].waitForFunction(
+    () => !document.querySelector("#startGame").disabled,
+  );
+  await pages[0].click("#startGame");
+  await Promise.all(pages.map(p=>p.waitForFunction(()=>window.testState?.phase==="hiding")));
   const roles = await Promise.all(
     pages.map((p) => p.locator("#role").textContent()),
   );

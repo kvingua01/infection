@@ -23,6 +23,8 @@
         >
           CAMERA: THIRD PERSON · V
         </button>
+        <button id="lobbyInfo" type="button">LOBBY</button>
+        <button id="leaveGame" type="button">LEAVE LOBBY</button>
         <div id="timer">00:00</div>
       </header>
       <div id="role"></div>
@@ -48,16 +50,42 @@
           caught, join the hunt.
         </p>
         <form id="form">
-          <label for="nickname">YOUR NICKNAME</label
-          ><input
+          <label for="nickname">YOUR NICKNAME</label>
+          <input
             id="nickname"
             maxlength="18"
             placeholder="Block explorer"
             required
             autocomplete="nickname"
-          /><button>ENTER THE ARENA ↗</button>
+          />
+          <label for="lobbyName">LOBBY NAME (OPTIONAL)</label>
+          <input id="lobbyName" maxlength="32" placeholder="My friends' game" />
+          <div class="menu-grid">
+            <button id="createPublic" type="button">Create Public Lobby</button>
+            <button id="createPrivate" type="button">
+              Create Private Lobby
+            </button>
+            <button id="browsePublic" type="button">Join Public Lobby</button>
+            <button id="browsePrivate" type="button">Join Private Lobby</button>
+          </div>
+          <section id="publicBrowser" hidden>
+            <h2>Public lobbies</h2>
+            <div id="publicList"></div>
+          </section>
+          <section id="privateBrowser" hidden>
+            <label for="privateCode">6-CHARACTER LOBBY CODE</label>
+            <input
+              id="privateCode"
+              maxlength="6"
+              autocomplete="off"
+              placeholder="ABC123"
+            />
+            <button id="joinPrivate" type="button">Join with code</button>
+          </section>
         </form>
-        <p id="connection">2–32 players · Six worlds · Eight power-ups</p>
+        <p id="connection" role="status">
+          Up to 12 players per lobby · Six worlds
+        </p>
         <details>
           <summary>How to play</summary>
           <p>
@@ -70,12 +98,32 @@
         </details>
       </div>
     </section>
+    <section id="waitingRoom" class="overlay" hidden>
+      <div class="card">
+        <span class="eyebrow" id="roomType"></span>
+        <h2 id="roomName"></h2>
+        <div id="privateRoomCode" hidden>
+          <label for="shareCode">PRIVATE LOBBY CODE</label
+          ><input id="shareCode" readonly /><button id="copyCode" type="button">
+            Copy Code
+          </button>
+        </div>
+        <p id="roomCount"></p>
+        <div id="roomPlayers"></div>
+        <p id="roomStatus"></p>
+        <button id="startGame" type="button" hidden>Start Game</button>
+        <button id="watchGame" type="button" hidden>Watch Game</button>
+        <button id="leaveRoom" type="button">Leave Lobby</button>
+        <p id="roomError" role="status"></p>
+      </div>
+    </section>
     <section id="scores" class="overlay" hidden>
       <div class="card">
         <h2 id="result">SCOREBOARD</h2>
         <div id="scoreRows"></div>
         <p id="next"></p>
         <button id="closeScores">BACK TO GAME</button>
+        <button id="leaveScores" type="button">Leave Lobby</button>
       </div>
     </section>
     <div id="error" hidden></div>

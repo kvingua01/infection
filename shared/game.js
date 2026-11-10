@@ -15,8 +15,10 @@ export class Game {
     hide = 30,
     round = 300,
     intermission = 10,
+    autoStart = true,
   } = {}) {
     this.random = random;
+    this.autoStart = autoStart;
     this.durations = { hide, round, intermission };
     this.players = new Map();
     this.map = createMap(0);
@@ -232,7 +234,8 @@ export class Game {
   }
   tick(dt) {
     this.time += dt;
-    if (this.phase === "lobby" && this.players.size >= 2) this.start();
+    if (this.autoStart && this.phase === "lobby" && this.players.size >= 2)
+      this.start();
     if (this.phase === "intermission" && this.time >= this.until) {
       if (this.players.size >= 2) this.start();
       else {
