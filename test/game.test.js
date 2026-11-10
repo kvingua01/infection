@@ -217,3 +217,39 @@ test("decoys move and decoy/smoke lifetimes are enforced", () => {
   for (let n = 0; n < 150; n++) g.tick(1 / 30);
   assert.equal(g.decoys.length, 0);
 });
+
+test("hiders run at half seeker speed and boost temporarily restores seeker pace", () => {
+  const g = setup();
+  g.tick(30);
+  g.map.blocks = [{ x: 0, y: -0.5, z: 0, w: 64, h: 1, d: 64 }];
+  const h = g.active().find((p) => p.role === "hider"),
+    s = g.active().find((p) => p.role === "seeker");
+  Object.assign(h, { x: 0, y: 0, z: 0 });
+  Object.assign(s, { x: 0, y: 0, z: 10 });
+  g.input(h.id, { x: 1, z: 0 });
+  g.input(s.id, { x: 1, z: 0 });
+  for (let n = 0; n < 30; n++) g.tick(1 / 30);
+  assert(Math.abs(h.x - 3) < 0.01);
+  assert(Math.abs(s.x - 6) < 0.01);
+  h.effects.speed = g.time + 15;
+  const start = h.x;
+  for (let n = 0; n < 30; n++) g.tick(1 / 30);
+  assert(Math.abs(h.x - start - 6) < 0.01);
+});
+test("each map adds eight usable shelters with front and side escape routes", () => {
+  for (let i = 0; i < 6; i++) {
+    const map = createMap(i);
+    assert.equal(map.hidingSpots.length, 8, map.name);
+    for (const p of map.hidingSpots) {
+      // Standing room, entry straight from the front, and a second exit on the right.
+      for (let d = 0; d <= 3; d += 0.1) {
+        assert(!solid(map, p.x, 0, p.z + d), `${map.name} blocked front entry`);
+        assert(
+          !solid(map, p.x + d, 0, p.z + 1),
+          `${map.name} blocked side exit`,
+        );
+      }
+      assert(solid(map, p.x, 0, p.z - 1.8), `${map.name} missing rear cover`);
+    }
+  }
+});

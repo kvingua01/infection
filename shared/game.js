@@ -260,7 +260,10 @@ export class Game {
       const frozen = p.effects.freeze > this.time;
       let { x = 0, z = 0, jump = false } = p.input;
       const l = Math.max(1, Math.hypot(x, z)),
-        speed = (p.effects.speed > this.time ? 12 : 6) * (frozen ? 0 : 1);
+        speed =
+          (p.role === "hider" ? 3 : 6) *
+          (p.effects.speed > this.time ? 2 : 1) *
+          (frozen ? 0 : 1);
       x = (x / l) * speed * dt;
       z = (z / l) * speed * dt;
       const move = (dx, dz) => {

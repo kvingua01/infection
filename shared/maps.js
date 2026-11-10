@@ -9,7 +9,8 @@ export const names = [
 export function createMap(index) {
   const blocks = [],
     labels = [],
-    spawns = [];
+    spawns = [],
+    hidingSpots = [];
   const box = (x, y, z, w, h, d, color = "#a58666") =>
     blocks.push({ x, y, z, w, h, d, color });
   const label = (text, x, y, z) => labels.push({ text, x, y, z });
@@ -235,6 +236,60 @@ export function createMap(index) {
     box(7, -2.5, 19.25, 26, 3, 0.5, "#65717c");
     label(index === 0 ? "BASEMENT STAIRS" : "CAVE DESCENT", 20, 2, 29);
   }
+  // Add sheltered, human-sized cover in unused floor space. Keep existing
+  // stairs, doorways, tunnels and furniture clear; every shelter has two exits.
+  const coverColor = [
+    "#80634a",
+    "#5a8caa",
+    "#346645",
+    "#ac7d98",
+    "#ac7d43",
+    "#cf729c",
+  ][index];
+  const candidates = [];
+  for (let x = -27; x <= 27; x += 3) {
+    for (let z = -27; z <= 27; z += 3) {
+      const blocked = blocks.some(
+        (b) =>
+          b.y + b.h / 2 > 0.1 &&
+          b.y - b.h / 2 < 3.4 &&
+          Math.abs(x - b.x) < b.w / 2 + 2.5 &&
+          Math.abs(z - b.z) < b.d / 2 + 2.5,
+      );
+      const supported = [-2.5, 0, 2.5].every((dx) =>
+        [-2.5, 0, 2.5].every((dz) =>
+          blocks.some(
+            (b) =>
+              Math.abs(b.y + b.h / 2) < 0.01 &&
+              Math.abs(x + dx - b.x) < b.w / 2 &&
+              Math.abs(z + dz - b.z) < b.d / 2,
+          ),
+        ),
+      );
+      const exitsClear = [0, 0.5, 1, 1.5, 2, 2.5, 3].every(
+        (d) =>
+          !solid({ blocks }, x, 0, z + d) &&
+          !solid({ blocks }, x + d, 0, z + 1) &&
+          solid({ blocks }, x, -0.06, z + d) &&
+          solid({ blocks }, x + d, -0.06, z + 1),
+      );
+      if (!blocked && supported && exitsClear) candidates.push({ x, z });
+    }
+  }
+  candidates.sort(
+    (a, b) =>
+      ((a.x * 13 + a.z * 29 + index * 17 + 2000) % 101) -
+      ((b.x * 13 + b.z * 29 + index * 17 + 2000) % 101),
+  );
+  for (const { x, z } of candidates) {
+    if (hidingSpots.length >= 8) break;
+    if (hidingSpots.some((p) => Math.hypot(p.x - x, p.z - z) < 8)) continue;
+    box(x, 1.4, z - 1.8, 4, 2.8, 0.4, coverColor);
+    box(x - 1.8, 1.4, z, 0.4, 2.8, 3.6, coverColor);
+    box(x + 1.8, 1.4, z - 1, 0.4, 2.8, 1.6, coverColor);
+    box(x, 2.95, z, 4, 0.3, 4, coverColor);
+    hidingSpots.push({ x, y: 0, z });
+  }
   // An enclosed isolation room outside the arena is used only during hiding.
   box(45, -0.5, 0, 10, 1, 10, "#29384d");
   for (const [x, z, w, d] of [
@@ -271,6 +326,7 @@ export function createMap(index) {
     blocks,
     labels,
     spawns,
+    hidingSpots,
     release: spawns.reduce((a, b) =>
       Math.hypot(a.x, a.z) < Math.hypot(b.x, b.z) ? a : b,
     ),
