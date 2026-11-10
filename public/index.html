@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>INFECTION · Block & Seek</title>
+    <link rel="stylesheet" href="style.css" />
+    <script type="importmap">
+      { "imports": { "three": "/vendor/three.module.js" } }
+    </script>
+  </head>
+  <body>
+    <canvas id="world"></canvas>
+    <div id="hud" hidden>
+      <header>
+        <div class="brand">INFECTION <small>BLOCK & SEEK</small></div>
+        <div id="map"></div>
+        <div id="timer">00:00</div>
+      </header>
+      <div id="role"></div>
+      <div id="counts"></div>
+      <div id="notice"></div>
+      <div id="crosshair">+</div>
+      <footer>
+        <div id="inventory"></div>
+        <div id="effects"></div>
+        <div id="cooldown"></div>
+        <p>
+          WASD move · SPACE jump · Mouse look · Click throw<br />1 / 2 select ·
+          F activate · ESC release mouse · TAB scores
+        </p>
+      </footer>
+    </div>
+    <section id="join" class="overlay">
+      <div class="card">
+        <span class="eyebrow">A MULTIPLAYER BLOCK WORLD</span>
+        <h1>HIDE.<br />SEEK.<br /><em>INFECT.</em></h1>
+        <p>
+          Thirty seconds to disappear. Five minutes to survive.<br />Once
+          caught, join the hunt.
+        </p>
+        <form id="form">
+          <label for="nickname">YOUR NICKNAME</label
+          ><input
+            id="nickname"
+            maxlength="18"
+            placeholder="Block explorer"
+            required
+            autocomplete="nickname"
+          /><button>ENTER THE ARENA ↗</button>
+        </form>
+        <p id="connection">2–32 players · Six worlds · Eight power-ups</p>
+        <details>
+          <summary>How to play</summary>
+          <p>
+            WASD move, Space jump, mouse to aim. Click the world to capture your
+            mouse. Seekers throw with left click every 3 seconds. Hiders collect
+            glowing cubes; use 1 / 2 to select and F to activate. Your friends
+            join this same website. Late arrivals wait for the next round.
+          </p>
+        </details>
+      </div>
+    </section>
+    <section id="scores" class="overlay" hidden>
+      <div class="card">
+        <h2 id="result">SCOREBOARD</h2>
+        <div id="scoreRows"></div>
+        <p id="next"></p>
+        <button id="closeScores">BACK TO GAME</button>
+      </div>
+    </section>
+    <div id="error" hidden></div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="client.js"></script>
+  </body>
+</html>

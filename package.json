@@ -1,0 +1,22 @@
+{
+  "name": "infection",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test --test-isolation=none",
+    "test:service": "node scripts/service-smoke.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "4.22.3",
+    "socket.io": "4.8.1",
+    "three": "0.170.0"
+  },
+  "devDependencies": {
+    "socket.io-client": "4.8.1"
+  }
+}
