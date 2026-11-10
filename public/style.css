@@ -223,3 +223,20 @@ footer p {
     right: 16px;
   }
 }
+
+/* Gameplay HUD text should never intercept world clicks. */
+#hud {
+  pointer-events: none;
+}
+#cameraMode {
+  pointer-events: auto;
+  width: auto;
+  margin: 0;
+  padding: 9px 12px;
+  font-size: 10px;
+  background: #142538dd;
+  color: #c5ed80;
+}
+#cameraMode[aria-pressed="true"] {
+  border-color: #c5ed80;
+}

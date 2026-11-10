@@ -15,15 +15,16 @@ The server binds `0.0.0.0` and uses `PORT`, defaulting to 3000. Open the service
 
 Enter a nickname, then click the world to capture the mouse. Escape releases it.
 
-| Control    | Action                  |
-| ---------- | ----------------------- |
-| WASD       | Move relative to camera |
-| Mouse      | Rotate camera / aim     |
-| Space      | Jump                    |
-| Left click | Throw as seeker         |
-| 1 / 2      | Select inventory slot   |
-| F          | Use selected power-up   |
-| Hold Tab   | Scoreboard              |
+| Control           | Action                                  |
+| ----------------- | --------------------------------------- |
+| WASD              | Move relative to camera                 |
+| Mouse             | Rotate camera / aim                     |
+| Space             | Jump                                    |
+| V / camera button | Switch first-person / third-person view |
+| Left click        | Throw as seeker                         |
+| 1 / 2             | Select inventory slot                   |
+| F                 | Use selected power-up                   |
+| Hold Tab          | Scoreboard                              |
 
 Each round chooses one of six block-built maps and one original seeker. Hiders get 30 seconds to hide while the seeker is confined in an enclosed isolation room. The server omits other player positions from the isolated seeker's updates. The hunt lasts five minutes. A projectile hit converts a hider into a seeker; shields absorb one hit. Throws have a three-second cooldown. Converted seekers can throw immediately. Catch every hider to win as seekers; survive the timer to win as hiders. A ten-second intermission resets the map, roles, inventory and effects. Late arrivals and refreshed/reconnected browsers wait for the next round.
 
@@ -49,6 +50,17 @@ node scripts/network-smoke.js
 # Optional: a different service origin
 node scripts/network-smoke.js https://your-service-domain
 ```
+
+For the browser regression test, start an otherwise empty service with `npm start`, then run:
+
+```sh
+npx playwright install chromium
+npm run test:browser
+# Or use an installed Chromium:
+PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:browser
+```
+
+This test joins two browser sessions, waits through hiding, checks the camera button and V shortcut, fires in both camera modes and verifies the server cooldown. It takes about 40 seconds.
 
 The Node suite exercises server physics, map spawn collision, input clamping, isolation privacy, late arrivals, infection, projectile wall collision, cooldowns, shields, all power activation paths, inventory capacity, effect expiry, speed/freeze/jump behavior, twelve participants, disconnect replacement, wins, and automatic resets. The service test checks the PORT override, HTTP health check, and assets using a temporary server. The live smoke test uses twelve independent Socket.IO clients and waits through the real 30-second hiding period. Run it against an otherwise empty service.
 

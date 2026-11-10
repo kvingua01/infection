@@ -41,6 +41,8 @@ let mapIndex = -1,
   myId = null,
   selected = 0,
   queuedJump = false,
+  firstPerson = false,
+  cameraModeChanged = false,
   yaw = 0,
   pitch = 0.3,
   keys = {},
@@ -217,7 +219,7 @@ $("form").onsubmit = (e) => {
     myId = r.id;
     $("join").hidden = true;
     $("hud").hidden = false;
-    canvas.requestPointerLock();
+    requestMouseLock();
   });
 };
 socket.on("disconnect", () => {
@@ -273,10 +275,18 @@ socket.on("state", (s) => {
       .join(" · ");
     $("cooldown").textContent =
       me.role === "seeker"
-        ? me.cooldown > 0
-          ? `PROJECTILE · ${me.cooldown.toFixed(1)}s`
-          : "PROJECTILE READY · LEFT CLICK"
-        : "COLLECT CUBES · F TO ACTIVATE";
+        ? s.phase === "hiding"
+          ? "PROJECTILES LOCKED · WAIT FOR THE HUNT"
+          : s.phase !== "playing"
+            ? "PROJECTILES LOCKED · ROUND NOT ACTIVE"
+            : me.effects.freeze > s.time
+              ? "FROZEN · CANNOT THROW"
+              : me.cooldown > 0
+                ? `PROJECTILE · ${me.cooldown.toFixed(1)}s`
+                : "PROJECTILE READY · LEFT CLICK"
+        : me.role === "hider"
+          ? "COLLECT CUBES · F TO ACTIVATE"
+          : "WAITING FOR NEXT ROUND";
   }
   $("map").textContent = map.name;
   const seconds = Math.ceil(s.remaining);
@@ -316,24 +326,49 @@ $("closeScores").onclick = () => {
   showScores = false;
   if (state?.phase !== "intermission") $("scores").hidden = true;
 };
-canvas.onclick = () => {
-  if (!myId) return;
-  if (document.pointerLockElement !== canvas) {
-    canvas.requestPointerLock();
+function requestMouseLock() {
+  const request = canvas.requestPointerLock();
+  request?.catch(() => {
+    /* The next canvas click can retry browser permission. */
+  });
+}
+function toggleCamera() {
+  firstPerson = !firstPerson;
+  cameraModeChanged = true;
+  $("cameraMode").textContent =
+    `CAMERA: ${firstPerson ? "FIRST" : "THIRD"} PERSON · V`;
+  $("cameraMode").setAttribute("aria-pressed", String(firstPerson));
+}
+$("cameraMode").onclick = toggleCamera;
+canvas.addEventListener("mousedown", (event) => {
+  if (event.button !== 0 || !myId) return;
+  if (document.pointerLockElement !== canvas) requestMouseLock();
+  const self = state?.players.find((p) => p.id === myId);
+  if (
+    !self ||
+    self.role !== "seeker" ||
+    state.phase !== "playing" ||
+    self.cooldown > 0 ||
+    self.effects.freeze > state.time
+  )
     return;
-  }
-  const d = new THREE.Vector3();
-  camera.getWorldDirection(d);
-  const ray = new THREE.Raycaster(camera.position, d);
-  const hit = ray.intersectObjects(world.children, false)[0];
-  const aim = hit ? hit.point : camera.position.clone().addScaledVector(d, 100);
-  const me = models.get(myId);
-  if (me)
-    d.copy(aim)
-      .sub(me.position.clone().add(new THREE.Vector3(0, 1.2, 0)))
-      .normalize();
-  socket.emit("throw", { x: d.x, y: d.y, z: d.z });
-};
+  // Labels are sprites, not solid targets. setFromCamera also supplies the
+  // camera required by Three.js raycasting and follows the screen crosshair.
+  camera.updateMatrixWorld();
+  const ray = new THREE.Raycaster();
+  ray.setFromCamera(new THREE.Vector2(0, 0), camera);
+  const hit = ray.intersectObjects(
+    world.children.filter((o) => o.isMesh),
+    false,
+  )[0];
+  const aim = hit ? hit.point : ray.ray.at(100, new THREE.Vector3());
+  const direction = aim
+    .clone()
+    .sub(new THREE.Vector3(self.x, self.y + 1.2, self.z));
+  if (direction.lengthSq() < 0.0001) return;
+  direction.normalize();
+  socket.emit("throw", { x: direction.x, y: direction.y, z: direction.z });
+});
 document.addEventListener("mousemove", (e) => {
   if (document.pointerLockElement !== canvas) return;
   yaw -= e.movementX * 0.0025;
@@ -344,6 +379,7 @@ addEventListener("keydown", (e) => {
   if (["Space", "Tab"].includes(e.code)) e.preventDefault();
   keys[e.code] = true;
   if (e.code === "Space") queuedJump = true;
+  if (e.code === "KeyV" && !e.repeat) toggleCamera();
   if (e.code === "Digit1") selected = 0;
   if (e.code === "Digit2") selected = 1;
   if (e.code === "KeyF" && !e.repeat) socket.emit("use", selected);
@@ -407,12 +443,18 @@ function frame(now) {
         break;
       }
     }
-    me.visible = distance > 1.1 && me.userData.target.role !== "waiting";
-    camera.position.lerp(
-      target.clone().addScaledVector(offset, distance),
-      1 - Math.exp(-dt * 16),
-    );
-    camera.lookAt(target.clone().addScaledVector(aimDirection, 20));
+    me.visible =
+      !firstPerson && distance > 1.1 && me.userData.target.role !== "waiting";
+    const eye = firstPerson
+      ? me.position.clone().add(new THREE.Vector3(0, 1.6, 0))
+      : target;
+    const desired = firstPerson
+      ? eye
+      : target.clone().addScaledVector(offset, distance);
+    if (firstPerson || cameraModeChanged) camera.position.copy(desired);
+    else camera.position.lerp(desired, 1 - Math.exp(-dt * 16));
+    cameraModeChanged = false;
+    camera.lookAt(eye.clone().addScaledVector(aimDirection, 20));
   } else {
     camera.position.set(25, 32, 30);
     camera.lookAt(0, 0, 0);
