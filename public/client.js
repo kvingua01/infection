@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { createMap, solid } from "/shared/maps.js";
+import { HUNTER_BURST_SECONDS, HUNTER_POWER_UPS } from "/shared/hunter.js";
 import { createSettings, inputLabel } from "./settings.js";
 const $ = (id) => document.getElementById(id),
   socket = io({ auth: { sessionId: tabSession() } }),
@@ -170,6 +171,72 @@ const colors = {
   jump: "#b8ed79",
   smoke: "#bdc2d0",
 };
+const hunterItems = new THREE.Group();
+const hunterBursts = new THREE.Group();
+const visionMarkers = new THREE.Group();
+scene.add(hunterItems, hunterBursts, visionMarkers);
+const visionMarkerMaterial = textSprite("◆").material;
+visionMarkerMaterial.color.set("#ff294a");
+visionMarkerMaterial.depthTest = false;
+visionMarkerMaterial.depthWrite = false;
+visionMarkerMaterial.fog = false;
+let hunterPickupId;
+const hunterCubeMaterial = new THREE.MeshBasicMaterial({
+  color: "#ff1836", map: blockTexture,
+});
+const hunterParticleMaterial = new THREE.MeshBasicMaterial({ color: "#ff5267" });
+let visionDeadline = 0;
+
+function hunterBlock(group, material, size) {
+  const block = new THREE.Mesh(geometry, material);
+  block.scale.setScalar(size);
+  group.add(block);
+  return block;
+}
+function renderHunterItems(s) {
+  if (hunterPickupId !== s.hunterPickup?.id) {
+    clear(hunterItems);
+    hunterPickupId = s.hunterPickup?.id;
+    if (s.hunterPickup) addHunterPickup(s.hunterPickup);
+  }
+  hunterBursts.clear();
+  visionMarkers.clear();
+  for (const { x, y, z, expires } of s.hunterBursts) {
+    const progress = 1 - (expires - s.time) / HUNTER_BURST_SECONDS;
+    for (let n = 0; n < 12; n++) {
+      const angle = n * Math.PI / 6;
+      const radius = 0.4 + progress * 2.2;
+      const particle = hunterBlock(hunterBursts, hunterParticleMaterial, 0.16);
+      particle.position.set(
+        x + Math.cos(angle) * radius, y + 0.7 + progress, z + Math.sin(angle) * radius,
+      );
+    }
+  }
+  if (s.hunterVision) {
+    visionDeadline = performance.now() + (s.hunterVision.until - s.time) * 1000;
+    for (const { x, y, z } of s.hunterVision.targets) {
+      const marker = new THREE.Sprite(visionMarkerMaterial);
+      marker.renderOrder = 100;
+      marker.scale.set(6, 0.75, 1);
+      marker.position.set(x, y + 2.2, z);
+      visionMarkers.add(marker);
+    }
+  }
+}
+function addHunterPickup({ x, y, z, type }) {
+  const group = new THREE.Group();
+  group.position.set(x, y + 1.1, z);
+  const block = hunterBlock(group, hunterCubeMaterial, 0.68);
+  const icon = textSprite(HUNTER_POWER_UPS[type].icon);
+  icon.position.y = 0.66;
+  icon.scale.set(1.8, 0.28, 1);
+  group.add(icon, new THREE.PointLight("#ff1836", 4, 5));
+  const particles = Array.from({ length: 8 }, () =>
+    hunterBlock(group, hunterParticleMaterial, 0.085),
+  );
+  group.userData = { baseY: group.position.y, block, particles };
+  hunterItems.add(group);
+}
 function renderItems() {
   clear(items);
   if (!state) return;
@@ -275,6 +342,11 @@ function resetLobby() {
   }
   models.clear();
   clear(items);
+  clear(hunterItems);
+  hunterBursts.clear();
+  visionMarkers.clear();
+  hunterPickupId = undefined;
+  $("hunterNotice").hidden = true;
   $("hud").hidden = true;
   $("scores").hidden = true;
   $("waitingRoom").hidden = true;
@@ -468,7 +540,18 @@ socket.on("state", (s) => {
     $("role").textContent = me.role.toUpperCase();
     $("role").style.borderColor = me.role === "seeker" ? "#ff795e" : "#c5ed80";
     $("inventory").innerHTML = "";
-    for (let n = 0; n < 2; n++) {
+    const notice = $("hunterNotice");
+    const message = me.hunterNotice?.text || "";
+    if (notice.textContent !== message) notice.textContent = message;
+    notice.hidden = !message;
+    if (me.role === "seeker") {
+      const slot = document.createElement("div");
+      slot.className = "slot hunter-slot";
+      const power = HUNTER_POWER_UPS[me.hunterItem];
+      slot.textContent = `${bindingLabel("use")}  ·  ${power ? power.icon + " " + power.name : "Hunter Power-Up · Empty"}`;
+      $("inventory").append(slot);
+    }
+    for (let n = 0; me.role !== "seeker" && n < 2; n++) {
       const el = document.createElement("div");
       el.className = "slot" + (selected === n ? " selected" : "");
       el.textContent = `${bindingLabel(n === 0 ? "slot1" : "slot2")}  ${(me.inventory[n] || "EMPTY").toUpperCase()}`;
@@ -527,6 +610,7 @@ socket.on("state", (s) => {
   $("next").textContent =
     s.phase === "intermission" ? `Next round in ${seconds}s` : "";
   renderItems();
+  renderHunterItems(s);
 });
 $("closeScores").onclick = () => {
   showScores = false;
@@ -788,6 +872,19 @@ function frame(now) {
   scene.fog.near = smoky ? 0 : 35;
   scene.fog.far = smoky ? 3 : 100;
   scene.fog.color.set(smoky ? "#a4afb5" : "#a9d0dc");
+  if (visionMarkers.children.length && now >= visionDeadline) visionMarkers.clear();
+  for (const group of hunterItems.children) {
+    const { baseY, block, particles } = group.userData;
+    if (!block) continue;
+    const t = now / 1000;
+    group.position.y = baseY + Math.sin(t * 3) * 0.18;
+    block.rotation.y = t * 1.8;
+    for (const [n, particle] of particles.entries()) {
+      const angle = t * (n % 2 ? -2 : 2) + n * Math.PI / 4;
+      particle.position.set(Math.cos(angle) * 0.68, Math.sin(t * 3 + n) * 0.42,
+        Math.sin(angle) * 0.68);
+    }
+  }
   renderer.render(scene, camera);
 }
 addEventListener("resize", () => {

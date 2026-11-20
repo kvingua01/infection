@@ -351,3 +351,25 @@ header {
 #bindingConflict {
   margin-bottom: 10px;
 }
+
+.hunter-slot {
+  border-color: #ff5267;
+  background: #391823e8;
+  color: #ffd2d8;
+  font-weight: 800;
+}
+#hunterNotice {
+  position: fixed;
+  top: 34%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 90vw;
+  padding: 10px 18px;
+  border: 2px solid #ff5267;
+  background: #451323eb;
+  color: #ffe4e7;
+  font-weight: 800;
+  text-align: center;
+  pointer-events: none;
+}
