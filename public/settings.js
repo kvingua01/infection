@@ -55,7 +55,7 @@ export function inputLabel(code) {
     .replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
-export function createSettings({ onOpen, onClose, onSave, inGame }) {
+export function createSettings({ onOpen, onClose, onSave, inGame, controller }) {
   const $ = (id) => document.getElementById(id);
   const dialog = $("settings");
   const buttons = {};
@@ -107,6 +107,7 @@ export function createSettings({ onOpen, onClose, onSave, inGame }) {
   function open() {
     if (dialog.open) return;
     draft = { ...bindings };
+    controller.open();
     render();
     $("closeSettings").textContent = inGame() ? "Back to Game" : "Back to Menu";
     dialog.showModal();
@@ -114,6 +115,7 @@ export function createSettings({ onOpen, onClose, onSave, inGame }) {
   }
 
   function close() {
+    controller.cancel();
     capturing = null;
     conflict = null;
     dialog.close();
@@ -139,13 +141,23 @@ export function createSettings({ onOpen, onClose, onSave, inGame }) {
 
   $("menuSettings").onclick = $("gameSettings").onclick = open;
   $("closeSettings").onclick = $("cancelSettings").onclick = close;
-  $("toggleControls").onclick = () => {
+  function back() {
+    if (controller.cancel()) return;
+    if (capturing || conflict) cancelCapture();
+    else close();
+  }
+  function selectTab(controllerTab) {
     cancelCapture();
-    const list = $("controlList");
-    list.hidden = !list.hidden;
-    $("toggleControls").setAttribute("aria-expanded", String(!list.hidden));
-    $("toggleControls").focus();
-  };
+    controller.cancel();
+    $("controlList").hidden = controllerTab;
+    $("controllerPanel").hidden = !controllerTab;
+    $("toggleControls").setAttribute("aria-expanded", String(!controllerTab));
+    $("controllerTab").setAttribute("aria-expanded", String(controllerTab));
+    $("resetBindings").hidden = controllerTab;
+    $(controllerTab ? "controllerTab" : "toggleControls").focus();
+  }
+  $("toggleControls").onclick = () => selectTab(false);
+  $("controllerTab").onclick = () => selectTab(true);
   $("cancelBinding").onclick = cancelCapture;
   $("swapBinding").onclick = () => {
     const { action, other } = conflict;
@@ -159,11 +171,13 @@ export function createSettings({ onOpen, onClose, onSave, inGame }) {
     render("Defaults restored. Save Settings to apply them.");
   };
   $("saveBindings").onclick = () => {
+    const savedController = controller.save();
+    if (savedController === null) return;
     bindings = { ...draft };
     onSave(bindings);
     try {
       localStorage.setItem(storageKey, JSON.stringify(bindings));
-      render("Settings saved.");
+      render(savedController ? "Settings saved." : "Settings applied. Controller storage is unavailable.");
     } catch {
       render("Settings applied. This browser could not save them for future visits.");
     }
@@ -176,8 +190,7 @@ export function createSettings({ onOpen, onClose, onSave, inGame }) {
     event.stopPropagation();
     if (event.repeat) return;
     if (event.code === "Escape") {
-      if (capturing || conflict) cancelCapture();
-      else close();
+      back();
     } else {
       assign(event.code);
     }
@@ -198,5 +211,5 @@ export function createSettings({ onOpen, onClose, onSave, inGame }) {
   }
   dialog.addEventListener("contextmenu", (event) => event.preventDefault());
 
-  return { open, isOpen: () => dialog.open, bindings: () => bindings };
+  return { open, back, isOpen: () => dialog.open, bindings: () => bindings };
 }

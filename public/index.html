@@ -83,6 +83,7 @@
           </section>
         </form>
         <button id="menuSettings" type="button">Settings</button>
+        <p id="controllerBanner" role="status" hidden></p>
         <p id="connection" role="status">
           Up to 12 players per lobby · Six worlds
         </p>
@@ -93,6 +94,8 @@
             every 2 seconds. Hiders collect glowing cubes to use as power-ups.
             Find your current bindings in Settings. Your friends join this same
             website. Late arrivals wait for the next round.
+            For controller play, connect a standard gamepad and press a button.
+            Use the D-pad or left stick to navigate.
           </p>
         </details>
       </div>
@@ -127,8 +130,25 @@
     </section>
     <dialog id="settings" class="card" aria-labelledby="settingsTitle">
       <h2 id="settingsTitle">Settings</h2>
+      <div class="settings-actions">
       <button id="toggleControls" type="button" aria-controls="controlList" aria-expanded="true">Controls</button>
+      <button id="controllerTab" type="button" aria-controls="controllerPanel" aria-expanded="false">Controller</button>
+      </div>
       <div id="controlList"></div>
+      <section id="controllerPanel" hidden>
+        <p id="controllerConnection" role="status">Controller Disconnected</p>
+        <p id="controllerName"></p>
+        <p id="controllerHaptics"></p>
+        <div id="controllerOptions"></div>
+        <button id="customizeController" type="button" aria-controls="controllerBindings" aria-expanded="false">Customize Controller Buttons</button>
+        <div id="controllerBindings" hidden></div>
+        <p id="controllerSettingsStatus" role="status"></p>
+        <div id="controllerBindingConflict" class="settings-actions" hidden>
+          <button id="swapControllerBinding" type="button">Swap Controller Bindings</button>
+          <button id="cancelControllerBinding" type="button">Cancel Controller Change</button>
+        </div>
+        <button id="resetController" type="button">Reset Controller Controls to Defaults</button>
+      </section>
       <p id="settingsStatus" role="status" aria-live="polite"></p>
       <div id="bindingConflict" class="settings-actions" hidden>
         <button id="swapBinding" type="button">Swap Bindings</button>
@@ -141,6 +161,16 @@
         <button id="closeSettings" type="button">Back to Game</button>
       </div>
     </dialog>
+    <dialog id="screenKeyboard" class="card" aria-labelledby="keyboardTitle">
+      <h2 id="keyboardTitle"></h2>
+      <input id="keyboardValue" aria-labelledby="keyboardTitle" />
+      <div id="keyboardKeys"></div>
+      <div class="settings-actions">
+        <button id="keyboardCancel" type="button">Cancel</button>
+        <button id="keyboardDone" type="button">Done</button>
+      </div>
+    </dialog>
+    <div id="controllerToast" role="status" hidden></div>
     <div id="error" hidden></div>
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="client.js"></script>

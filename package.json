@@ -9,7 +9,8 @@
     "test:service": "node scripts/service-smoke.js",
     "test:browser": "node scripts/browser-smoke.js",
     "test:lobbies": "node scripts/lobby-smoke.js",
-    "test:lobby-browser": "node scripts/lobby-browser.js"
+    "test:lobby-browser": "node scripts/lobby-browser.js",
+    "test:controller-browser": "node scripts/controller-browser.js"
   },
   "engines": {
     "node": ">=22"

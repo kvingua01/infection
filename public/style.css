@@ -373,3 +373,69 @@ header {
   text-align: center;
   pointer-events: none;
 }
+
+#controllerBanner,
+#controllerConnection {
+  color: #c5ed80;
+}
+#controllerPanel {
+  max-height: 45dvh;
+  overflow: auto;
+  margin-top: 10px;
+}
+#controllerPanel p {
+  margin: 4px 0;
+}
+#controllerOptions label {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(50px, 1fr) 3.2em;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+#controllerOptions input {
+  accent-color: #c5ed80;
+  padding: 0;
+}
+#controllerPanel > button,
+#controllerBindings,
+#controllerBindingConflict {
+  margin-top: 8px;
+}
+.controller-active :focus {
+  outline: 3px solid #f7df87;
+  outline-offset: -2px;
+}
+#screenKeyboard {
+  width: min(520px, 94vw);
+  max-height: 94dvh;
+  color: inherit;
+  padding: clamp(12px, 4vw, 26px);
+}
+#screenKeyboard::backdrop {
+  background: #09111bd9;
+}
+#keyboardKeys {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 4px;
+  margin: 12px 0 4px;
+}
+#keyboardKeys button {
+  margin: 0;
+  padding: 8px 0;
+  font-size: clamp(8px, 2vw, 13px);
+}
+#controllerToast {
+  position: fixed;
+  right: 24px;
+  top: 80px;
+  z-index: 6;
+  padding: 9px 14px;
+  border: 1px solid #c5ed80;
+  background: #142538ee;
+  color: #c5ed80;
+  pointer-events: none;
+}

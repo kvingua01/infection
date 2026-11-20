@@ -1,3 +1,6 @@
+import { buttonLabel, controllerType, createGamepadInput } from "./gamepad.js";
+import { createControllerSettings } from "./controller-settings.js";
+import { createControllerMenu } from "./controller-menu.js";
 import { PROJECTILE_SIZE } from "/shared/projectile.js";
 import * as THREE from "three";
 import { createMap, solid } from "/shared/maps.js";
@@ -469,7 +472,7 @@ for (const id of ["leaveRoom", "leaveGame", "leaveScores"])
 $("watchGame").onclick = () => {
   roomPanelOpen = false;
   updateLobbyView();
-  requestMouseLock();
+  if (activeDevice === "keyboard") requestMouseLock();
 };
 $("lobbyInfo").onclick = () => {
   roomPanelOpen = true;
@@ -624,7 +627,15 @@ function requestMouseLock() {
   });
 }
 let resumeMouseLock = false;
+let activeDevice = "keyboard";
+let padType = "standard";
+let stickSide = 0, stickForward = 0, padJump = false, padScores = false;
+let padWasInMenu = false;
+let controllerToastTimeout;
+const gamepad = createGamepadInput();
+const controller = createControllerSettings();
 const settings = createSettings({
+  controller,
   inGame: () => !!myId && !roomPanelOpen,
   onOpen: () => {
     clearInput();
@@ -635,27 +646,54 @@ const settings = createSettings({
     clearInput();
     // When left click opens Settings, the Back to Game button can acquire
     // pointer lock even if the canvas has not held it yet.
-    if (canPlay() && (resumeMouseLock || actionFor("Mouse0") === "settings"))
+    if (activeDevice === "keyboard" && canPlay() &&
+        (resumeMouseLock || actionFor("Mouse0") === "settings"))
       requestMouseLock();
     resumeMouseLock = false;
   },
   onSave: updateControlLabels,
 });
+const controllerMenu = createControllerMenu({
+  settings,
+  controller,
+  back(scope) {
+    if (scope === "waitingRoom") {
+      $(currentLobby?.phase === "lobby" ? "leaveRoom" : "watchGame").click();
+    } else if (scope === "join") {
+      $("publicBrowser").hidden = true;
+      $("privateBrowser").hidden = true;
+      $("nickname").focus();
+    } else if (scope === "scores" && state?.phase !== "intermission") {
+      $("closeScores").click();
+    }
+  },
+});
 updateControlLabels();
 
+function useInputDevice(device) {
+  if (activeDevice === device) return;
+  activeDevice = device;
+  document.body.classList.toggle("controller-active", device === "controller");
+  updateControlLabels();
+}
 function bindingLabel(action) {
-  return inputLabel(settings.bindings()[action]);
+  return activeDevice === "controller"
+    ? buttonLabel(controller.values().buttons[action], padType)
+    : inputLabel(settings.bindings()[action]);
 }
 function updateControlLabels() {
   const name = firstPerson ? "FIRST" : "THIRD";
   $("cameraMode").textContent = `CAMERA: ${name} PERSON · ${bindingLabel("camera")}`;
   $("cameraMode").title = `Switch camera (${bindingLabel("camera")})`;
   $("gameSettings").title = `Open settings (${bindingLabel("settings")})`;
+  const controllerActive = activeDevice === "controller";
+  const move = controllerActive ? "Left Stick" : ["forward", "left", "backward", "right"].map(bindingLabel).join(" / ");
+  const look = controllerActive ? "Right Stick" : "Mouse";
   $("controlHints").textContent =
-    `${["forward", "left", "backward", "right"].map(bindingLabel).join(" / ")} move · ` +
-    `${bindingLabel("jump")} jump · Mouse look · ${bindingLabel("throw")} throw · ` +
+    `${move} move · ${bindingLabel("jump")} jump · ${look} look · ${bindingLabel("throw")} throw · ` +
     `${bindingLabel("slot1")} / ${bindingLabel("slot2")} select · ` +
-    `${bindingLabel("use")} activate · ${bindingLabel("scores")} scores`;
+    `${bindingLabel("use")} activate · ${bindingLabel("scores")} scores · ${bindingLabel("settings")} settings` +
+    (controllerActive ? ` · ${buttonLabel(1, padType)} lobby` : "");
 }
 function toggleCamera() {
   firstPerson = !firstPerson;
@@ -690,6 +728,7 @@ function throwProjectile() {
   if (direction.lengthSq() < 0.0001) return;
   direction.normalize();
   socket.emit("throw", { x: direction.x, y: direction.y, z: direction.z });
+  if (activeDevice === "controller") gamepad.rumble(controller.values());
 }
 function typing(target = document.activeElement) {
   return target instanceof Element &&
@@ -701,6 +740,8 @@ function canPlay() {
 }
 function clearInput() {
   held.clear();
+  stickSide = stickForward = 0;
+  padJump = false;
   queuedJump = false;
   showScores = false;
   if (state?.phase !== "intermission") $("scores").hidden = true;
@@ -724,6 +765,9 @@ function pressInput(code, event) {
   event.preventDefault();
   if (event.repeat || held.has(action)) return;
   held.add(action);
+  performAction(action);
+}
+function performAction(action) {
   switch (action) {
     case "jump":
       queuedJump = true;
@@ -763,6 +807,7 @@ canvas.addEventListener("auxclick", (event) => {
 });
 document.addEventListener("mousemove", (event) => {
   if (!canPlay() || document.pointerLockElement !== canvas) return;
+  if (event.movementX || event.movementY) useInputDevice("keyboard");
   yaw -= event.movementX * 0.0025;
   pitch = Math.max(-0.65, Math.min(1.2, pitch + event.movementY * 0.0025));
 });
@@ -784,11 +829,19 @@ document.addEventListener("pointerlockchange", () => {
   }
 });
 addEventListener("keydown", (event) => pressInput(event.code, event));
+addEventListener("keydown", () => useInputDevice("keyboard"), true);
+addEventListener("pointerdown", () => useInputDevice("keyboard"), true);
 addEventListener("keyup", (event) => releaseInput(event.code));
 addEventListener("mouseup", (event) => releaseInput("Mouse" + event.button));
-addEventListener("blur", clearInput);
+addEventListener("blur", () => {
+  clearInput();
+  gamepad.suspend();
+});
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) clearInput();
+  if (document.hidden) {
+    clearInput();
+    gamepad.suspend();
+  }
 });
 document.addEventListener("focusin", (event) => {
   if (typing(event.target)) clearInput();
@@ -796,20 +849,85 @@ document.addEventListener("focusin", (event) => {
 setInterval(() => {
   if (!myId) return;
   const active = canPlay();
-  const forward = active ? Number(held.has("forward")) - Number(held.has("backward")) : 0;
-  const side = active ? Number(held.has("right")) - Number(held.has("left")) : 0;
+  const forward = active ? Number(held.has("forward")) - Number(held.has("backward")) + stickForward : 0;
+  const side = active ? Number(held.has("right")) - Number(held.has("left")) + stickSide : 0;
+  const magnitude = stickSide || stickForward ? Math.max(1, Math.hypot(side, forward)) : 1;
   socket.emit("input", {
-    x: -Math.sin(yaw) * forward + Math.cos(yaw) * side,
-    z: -Math.cos(yaw) * forward - Math.sin(yaw) * side,
-    jump: active && (held.has("jump") || queuedJump),
+    x: (-Math.sin(yaw) * forward + Math.cos(yaw) * side) / magnitude,
+    z: (-Math.cos(yaw) * forward - Math.sin(yaw) * side) / magnitude,
+    jump: active && (held.has("jump") || padJump || queuedJump),
     yaw,
   });
   queuedJump = false;
 }, 1000 / 30);
+function updateGamepad(now, dt) {
+  const preferences = controller.values();
+  const sample = gamepad.poll(preferences);
+  const { pad, changed, down, pressed, left, right, moving } = sample;
+  stickSide = stickForward = 0;
+  padJump = false;
+  if (changed) {
+    padType = controllerType(pad?.id || "");
+    controller.connected(pad, padType);
+    const banner = $("controllerBanner");
+    banner.hidden = !pad;
+    banner.textContent = pad
+      ? `Controller Connected · ${buttonLabel(0, padType)} select · ${buttonLabel(1, padType)} back`
+      : "";
+    if ($("join").hidden) {
+      const toast = $("controllerToast");
+      toast.textContent = pad ? "Controller Connected" : "Controller Disconnected";
+      toast.hidden = false;
+      clearTimeout(controllerToastTimeout);
+      controllerToastTimeout = setTimeout(() => { toast.hidden = true; }, 2300);
+    }
+    if (!pad) useInputDevice("keyboard");
+    updateControlLabels();
+  }
+  const buttons = preferences.buttons;
+  if (padScores && (!down?.has(buttons.scores) || !showScores)) {
+    padScores = false;
+    $("closeScores").click();
+  }
+  if (moving || pressed?.length) useInputDevice("controller");
+  const inMenu = controllerMenu.update(sample, now);
+  if (inMenu) {
+    padWasInMenu = true;
+    return false;
+  }
+  if (padWasInMenu && down) {
+    if (down.size || moving) return false;
+    padWasInMenu = false;
+  }
+  if (!down || !canPlay()) return false;
+  if (pressed.includes(buttons.settings)) {
+    settings.open();
+    return false;
+  }
+  if (pressed.includes(1)) {
+    $("lobbyInfo").click();
+    return false;
+  }
+  stickSide = left.x;
+  stickForward = -left.y;
+  padJump = down.has(buttons.jump);
+  yaw -= right.x * dt * 3 * preferences.sensitivity * preferences.horizontal;
+  pitch = Math.max(-0.65, Math.min(1.2,
+    pitch + right.y * dt * 2.3 * preferences.sensitivity * preferences.vertical *
+      (preferences.invertY ? -1 : 1),
+  ));
+  for (const action of ["jump", "slot1", "slot2", "use", "camera", "scores"]) {
+    if (!pressed.includes(buttons[action])) continue;
+    performAction(action);
+    if (action === "scores") padScores = true;
+  }
+  return pressed.includes(buttons.throw);
+}
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - last) / 1000, 0.1);
   last = now;
+  const controllerThrow = updateGamepad(now, dt);
   for (const g of models.values()) {
     const p = g.userData.target;
     if (!p) continue;
@@ -886,6 +1004,7 @@ function frame(now) {
         Math.sin(angle) * 0.68);
     }
   }
+  if (controllerThrow) throwProjectile();
   renderer.render(scene, camera);
 }
 addEventListener("resize", () => {
