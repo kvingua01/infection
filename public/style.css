@@ -284,3 +284,70 @@ header {
   flex-wrap: wrap;
   gap: 12px;
 }
+
+#gameSettings {
+  pointer-events: auto;
+  width: auto;
+  padding: 9px;
+  margin: 0;
+  font-size: 10px;
+}
+#settings {
+  width: min(560px, 94vw);
+  max-height: 92dvh;
+  color: inherit;
+  padding: clamp(16px, 5vw, 32px);
+}
+#settings::backdrop {
+  background: #09111bd9;
+}
+#settings h2 {
+  margin: 0 0 12px;
+}
+#settings button {
+  margin: 0;
+  padding: 9px 12px;
+  font-size: 13px;
+  box-shadow: inset 0 -3px #0003;
+}
+#settings button:hover:not(:disabled),
+#settings button:focus-visible {
+  background: #e3ffb9;
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
+#controlList {
+  max-height: 39dvh;
+  overflow: auto;
+  margin-top: 10px;
+}
+.binding-row,
+.settings-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.binding-row {
+  padding: 5px;
+  border-bottom: 1px solid #ffffff22;
+  font-size: 13px;
+}
+#settings .binding-row button {
+  background: #273e50;
+  color: #edf5ef;
+  overflow-wrap: anywhere;
+}
+#settings .binding-row button:hover,
+#settings .binding-row button.capturing {
+  background: #3f586b;
+  border-color: #c5ed80;
+  color: #e3ffb9;
+}
+#settingsStatus {
+  min-height: 1.7em;
+  margin: 8px 0;
+}
+#bindingConflict {
+  margin-bottom: 10px;
+}

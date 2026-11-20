@@ -52,6 +52,11 @@ try {
   assert(await b.locator("#startGame").isHidden());
   const c = await player("Private host"),
     d = await player("Private friend");
+  await c.click("#menuSettings");
+  await c.getByRole("button", { name: "Switch Camera · V", exact: true }).click();
+  await c.keyboard.press("KeyC");
+  await c.click("#saveBindings");
+  await c.click("#closeSettings");
   await c.fill("#lobbyName", "Browser private");
   await c.click("#createPrivate");
   await c.locator("#privateRoomCode").waitFor({ state: "visible" });
@@ -78,6 +83,13 @@ try {
   await c.click("#startGame");
   for (const p of [a, b, c, d])
     await p.locator("#waitingRoom").waitFor({ state: "hidden" });
+  await c.keyboard.press("KeyC");
+  assert.equal(await c.locator("#cameraMode").getAttribute("aria-pressed"), "true");
+  await d.keyboard.press("KeyC");
+  assert.equal(await d.locator("#cameraMode").getAttribute("aria-pressed"), "false");
+  await c.click("#gameSettings");
+  await c.locator("#settings").waitFor({ state: "visible" });
+  await c.click("#closeSettings");
   await b.evaluate(() => document.exitPointerLock());
   await b.click("#lobbyInfo");
   assert((await b.locator("#roomCount").textContent()).includes("Public host"));
@@ -97,6 +109,9 @@ try {
   await c.evaluate(() => document.exitPointerLock());
   await c.click("#lobbyInfo");
   await c.click("#leaveRoom");
+  await c.click("#menuSettings");
+  assert(await c.getByRole("button", { name: "Switch Camera · C", exact: true }).isVisible());
+  await c.click("#closeSettings");
   await d.evaluate(() => document.exitPointerLock());
   await d.click("#lobbyInfo");
   await d.click("#leaveRoom");

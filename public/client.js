@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { createMap, solid } from "/shared/maps.js";
+import { createSettings, inputLabel } from "./settings.js";
 const $ = (id) => document.getElementById(id),
   socket = io({ auth: { sessionId: tabSession() } }),
   canvas = $("world");
@@ -57,9 +58,9 @@ let mapIndex = -1,
   cameraModeChanged = false,
   yaw = 0,
   pitch = 0.3,
-  keys = {},
   last = performance.now(),
   showScores = false;
+const held = new Set();
 const textureCanvas = document.createElement("canvas");
 textureCanvas.width = textureCanvas.height = 16;
 const tc = textureCanvas.getContext("2d");
@@ -265,9 +266,7 @@ function resetLobby() {
   myId = null;
   state = null;
   currentLobby = null;
-  keys = {};
-  queuedJump = false;
-  showScores = false;
+  clearInput();
   roomPanelOpen = false;
   document.exitPointerLock();
   for (const g of models.values()) {
@@ -289,10 +288,7 @@ function updateLobbyView() {
   const room = currentLobby,
     waiting = room.phase === "lobby";
   if (waiting) roomPanelOpen = true;
-  if (roomPanelOpen) {
-    keys = {};
-    queuedJump = false;
-  }
+  if (roomPanelOpen) clearInput();
   $("waitingRoom").hidden = !roomPanelOpen;
   $("hud").hidden = waiting;
   $("roomType").textContent = room.visibility.toUpperCase() + " LOBBY";
@@ -403,8 +399,8 @@ $("watchGame").onclick = () => {
   requestMouseLock();
 };
 $("lobbyInfo").onclick = () => {
-  document.exitPointerLock();
   roomPanelOpen = true;
+  document.exitPointerLock();
   updateLobbyView();
 };
 $("copyCode").onclick = async () => {
@@ -475,7 +471,7 @@ socket.on("state", (s) => {
     for (let n = 0; n < 2; n++) {
       const el = document.createElement("div");
       el.className = "slot" + (selected === n ? " selected" : "");
-      el.textContent = `${n + 1}  ${(me.inventory[n] || "EMPTY").toUpperCase()}`;
+      el.textContent = `${bindingLabel(n === 0 ? "slot1" : "slot2")}  ${(me.inventory[n] || "EMPTY").toUpperCase()}`;
       $("inventory").append(el);
     }
     $("effects").textContent = Object.entries(me.effects)
@@ -492,9 +488,9 @@ socket.on("state", (s) => {
               ? "FROZEN · CANNOT THROW"
               : me.cooldown > 0
                 ? `PROJECTILE · ${me.cooldown.toFixed(1)}s`
-                : "PROJECTILE READY · LEFT CLICK"
+                : `PROJECTILE READY · ${bindingLabel("throw")}`
         : me.role === "hider"
-          ? "COLLECT CUBES · F TO ACTIVATE"
+          ? `COLLECT CUBES · ${bindingLabel("use")} TO ACTIVATE`
           : "WAITING FOR NEXT ROUND";
   }
   $("map").textContent = map.name;
@@ -542,17 +538,48 @@ function requestMouseLock() {
     /* The next canvas click can retry browser permission. */
   });
 }
+let resumeMouseLock = false;
+const settings = createSettings({
+  inGame: () => !!myId && !roomPanelOpen,
+  onOpen: () => {
+    clearInput();
+    resumeMouseLock = document.pointerLockElement === canvas;
+    if (resumeMouseLock) document.exitPointerLock();
+  },
+  onClose: () => {
+    clearInput();
+    // When left click opens Settings, the Back to Game button can acquire
+    // pointer lock even if the canvas has not held it yet.
+    if (canPlay() && (resumeMouseLock || actionFor("Mouse0") === "settings"))
+      requestMouseLock();
+    resumeMouseLock = false;
+  },
+  onSave: updateControlLabels,
+});
+updateControlLabels();
+
+function bindingLabel(action) {
+  return inputLabel(settings.bindings()[action]);
+}
+function updateControlLabels() {
+  const name = firstPerson ? "FIRST" : "THIRD";
+  $("cameraMode").textContent = `CAMERA: ${name} PERSON · ${bindingLabel("camera")}`;
+  $("cameraMode").title = `Switch camera (${bindingLabel("camera")})`;
+  $("gameSettings").title = `Open settings (${bindingLabel("settings")})`;
+  $("controlHints").textContent =
+    `${["forward", "left", "backward", "right"].map(bindingLabel).join(" / ")} move · ` +
+    `${bindingLabel("jump")} jump · Mouse look · ${bindingLabel("throw")} throw · ` +
+    `${bindingLabel("slot1")} / ${bindingLabel("slot2")} select · ` +
+    `${bindingLabel("use")} activate · ${bindingLabel("scores")} scores`;
+}
 function toggleCamera() {
   firstPerson = !firstPerson;
   cameraModeChanged = true;
-  $("cameraMode").textContent =
-    `CAMERA: ${firstPerson ? "FIRST" : "THIRD"} PERSON · V`;
+  updateControlLabels();
   $("cameraMode").setAttribute("aria-pressed", String(firstPerson));
 }
 $("cameraMode").onclick = toggleCamera;
-canvas.addEventListener("mousedown", (event) => {
-  if (event.button !== 0 || !myId) return;
-  if (document.pointerLockElement !== canvas) requestMouseLock();
+function throwProjectile() {
   const self = state?.players.find((p) => p.id === myId);
   if (
     !self ||
@@ -578,37 +605,118 @@ canvas.addEventListener("mousedown", (event) => {
   if (direction.lengthSq() < 0.0001) return;
   direction.normalize();
   socket.emit("throw", { x: direction.x, y: direction.y, z: direction.z });
-});
-document.addEventListener("mousemove", (e) => {
-  if (document.pointerLockElement !== canvas) return;
-  yaw -= e.movementX * 0.0025;
-  pitch = Math.max(-0.65, Math.min(1.2, pitch + e.movementY * 0.0025));
-});
-addEventListener("keydown", (e) => {
-  if (document.activeElement.tagName === "INPUT" || !myId || roomPanelOpen)
+}
+function typing(target = document.activeElement) {
+  return target instanceof Element &&
+    (target.matches("input, textarea, select") || target.isContentEditable);
+}
+function canPlay() {
+  return !!myId && !roomPanelOpen && !settings.isOpen() &&
+    !typing() && $("scores").hidden;
+}
+function clearInput() {
+  held.clear();
+  queuedJump = false;
+  showScores = false;
+  if (state?.phase !== "intermission") $("scores").hidden = true;
+}
+function actionFor(code) {
+  const bindings = settings.bindings();
+  return Object.keys(bindings).find((action) => bindings[action] === code);
+}
+function pressInput(code, event) {
+  if (
+    !myId || roomPanelOpen || settings.isOpen() || typing(event.target) || typing()
+  ) return;
+  const action = actionFor(code);
+  if (!action) return;
+  if (action === "settings") {
+    event.preventDefault();
+    if (!event.repeat) settings.open();
     return;
-  if (["Space", "Tab"].includes(e.code)) e.preventDefault();
-  keys[e.code] = true;
-  if (e.code === "Space") queuedJump = true;
-  if (e.code === "KeyV" && !e.repeat) toggleCamera();
-  if (e.code === "Digit1") selected = 0;
-  if (e.code === "Digit2") selected = 1;
-  if (e.code === "KeyF" && !e.repeat) socket.emit("use", selected);
-  if (e.code === "Tab") showScores = true;
+  }
+  if (!canPlay()) return;
+  event.preventDefault();
+  if (event.repeat || held.has(action)) return;
+  held.add(action);
+  switch (action) {
+    case "jump":
+      queuedJump = true;
+      break;
+    case "throw":
+      throwProjectile();
+      break;
+    case "camera":
+      toggleCamera();
+      break;
+    case "slot1":
+    case "slot2":
+      selected = Number(action === "slot2");
+      break;
+    case "use":
+      socket.emit("use", selected);
+      break;
+    case "scores":
+      showScores = true;
+      break;
+  }
+}
+function releaseInput(code) {
+  const action = actionFor(code);
+  if (held.delete(action) && action === "scores") $("closeScores").click();
+}
+canvas.addEventListener("mousedown", (event) => {
+  pressInput("Mouse" + event.button, event);
+  if (event.button === 0 && canPlay() && document.pointerLockElement !== canvas)
+    requestMouseLock();
 });
-addEventListener("keyup", (e) => {
-  keys[e.code] = false;
-  if (e.code === "Tab") showScores = false;
+canvas.addEventListener("contextmenu", (event) => {
+  if (myId && actionFor("Mouse2")) event.preventDefault();
 });
-addEventListener("blur", () => (keys = {}));
+canvas.addEventListener("auxclick", (event) => {
+  if (myId && actionFor("Mouse" + event.button)) event.preventDefault();
+});
+document.addEventListener("mousemove", (event) => {
+  if (!canPlay() || document.pointerLockElement !== canvas) return;
+  yaw -= event.movementX * 0.0025;
+  pitch = Math.max(-0.65, Math.min(1.2, pitch + event.movementY * 0.0025));
+});
+let hadMouseLock = false;
+document.addEventListener("pointerlockchange", () => {
+  const locked = document.pointerLockElement === canvas;
+  const unlocked = hadMouseLock && !locked;
+  hadMouseLock = locked;
+  if (locked && settings.isOpen()) {
+    resumeMouseLock = true;
+    document.exitPointerLock();
+  }
+  if (!unlocked) return;
+  clearInput();
+  // Browsers can handle Escape themselves and only report the unlock.
+  if (canPlay() && document.hasFocus() && settings.bindings().settings === "Escape") {
+    settings.open();
+    resumeMouseLock = true;
+  }
+});
+addEventListener("keydown", (event) => pressInput(event.code, event));
+addEventListener("keyup", (event) => releaseInput(event.code));
+addEventListener("mouseup", (event) => releaseInput("Mouse" + event.button));
+addEventListener("blur", clearInput);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) clearInput();
+});
+document.addEventListener("focusin", (event) => {
+  if (typing(event.target)) clearInput();
+});
 setInterval(() => {
   if (!myId) return;
-  const forward = Number(!!keys.KeyW) - Number(!!keys.KeyS),
-    side = Number(!!keys.KeyD) - Number(!!keys.KeyA);
+  const active = canPlay();
+  const forward = active ? Number(held.has("forward")) - Number(held.has("backward")) : 0;
+  const side = active ? Number(held.has("right")) - Number(held.has("left")) : 0;
   socket.emit("input", {
     x: -Math.sin(yaw) * forward + Math.cos(yaw) * side,
     z: -Math.cos(yaw) * forward - Math.sin(yaw) * side,
-    jump: !!keys.Space || queuedJump,
+    jump: active && (held.has("jump") || queuedJump),
     yaw,
   });
   queuedJump = false;

@@ -19,12 +19,13 @@
           id="cameraMode"
           type="button"
           aria-pressed="false"
-          title="Switch camera (V)"
+          title="Switch camera"
         >
           CAMERA: THIRD PERSON · V
         </button>
         <button id="lobbyInfo" type="button">LOBBY</button>
         <button id="leaveGame" type="button">LEAVE LOBBY</button>
+        <button id="gameSettings" type="button">SETTINGS</button>
         <div id="timer">00:00</div>
       </header>
       <div id="role"></div>
@@ -35,10 +36,7 @@
         <div id="inventory"></div>
         <div id="effects"></div>
         <div id="cooldown"></div>
-        <p>
-          WASD move · SPACE jump · Mouse look · Click throw<br />1 / 2 select ·
-          F activate · V camera · ESC release mouse · TAB scores
-        </p>
+        <p id="controlHints"></p>
       </footer>
     </div>
     <section id="join" class="overlay">
@@ -83,17 +81,17 @@
             <button id="joinPrivate" type="button">Join with code</button>
           </section>
         </form>
+        <button id="menuSettings" type="button">Settings</button>
         <p id="connection" role="status">
           Up to 12 players per lobby · Six worlds
         </p>
         <details>
           <summary>How to play</summary>
           <p>
-            WASD move, Space jump, mouse to aim. Click the world to capture your
-            mouse. Press V or use the camera button to switch to first person.
-            Seekers throw with left click every 3 seconds. Hiders collect
-            glowing cubes; use 1 / 2 to select and F to activate. Your friends
-            join this same website. Late arrivals wait for the next round.
+            Click the world to capture your mouse and aim. Seekers can throw
+            every 3 seconds. Hiders collect glowing cubes to use as power-ups.
+            Find your current bindings in Settings. Your friends join this same
+            website. Late arrivals wait for the next round.
           </p>
         </details>
       </div>
@@ -126,6 +124,22 @@
         <button id="leaveScores" type="button">Leave Lobby</button>
       </div>
     </section>
+    <dialog id="settings" class="card" aria-labelledby="settingsTitle">
+      <h2 id="settingsTitle">Settings</h2>
+      <button id="toggleControls" type="button" aria-controls="controlList" aria-expanded="true">Controls</button>
+      <div id="controlList"></div>
+      <p id="settingsStatus" role="status" aria-live="polite"></p>
+      <div id="bindingConflict" class="settings-actions" hidden>
+        <button id="swapBinding" type="button">Swap Bindings</button>
+        <button id="cancelBinding" type="button">Cancel Change</button>
+      </div>
+      <div class="settings-actions">
+        <button id="resetBindings" type="button">Reset to Defaults</button>
+        <button id="saveBindings" type="button">Save Settings</button>
+        <button id="cancelSettings" type="button">Cancel</button>
+        <button id="closeSettings" type="button">Back to Game</button>
+      </div>
+    </dialog>
     <div id="error" hidden></div>
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="client.js"></script>
