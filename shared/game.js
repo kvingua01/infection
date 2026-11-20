@@ -1,3 +1,4 @@
+import { PROJECTILE_SIZE, PROJECTILE_COOLDOWN } from "./projectile.js";
 import { createMap, solid } from "./maps.js";
 import { HUNTER_BURST_SECONDS, HUNTER_POWER_UPS } from "./hunter.js";
 
@@ -157,7 +158,7 @@ export class Game {
     if (!d || ![d.x, d.y, d.z].every(Number.isFinite)) return false;
     const len = Math.hypot(d.x, d.y, d.z);
     if (!Number.isFinite(len) || len < 0.1) return false;
-    p.cooldown = this.time + 3;
+    p.cooldown = this.time + PROJECTILE_COOLDOWN;
     this.projectiles.push({
       id: ++this.serial,
       owner: id,
@@ -385,23 +386,24 @@ export class Game {
           type: this.pick(hunterTypes),
         };
     }
+    const projectileRadius = PROJECTILE_SIZE / 2;
     for (const b of this.projectiles) {
       const steps = Math.ceil((24 * dt) / 0.15);
       for (let n = 0; n < steps && !b.dead; n++) {
         b.x += (b.dx * 24 * dt) / steps;
         b.y += (b.dy * 24 * dt) / steps;
         b.z += (b.dz * 24 * dt) / steps;
-        if (solid(this.map, b.x, b.y, b.z, 0.16, 0.25)) {
+        if (solid(this.map, b.x, b.y - projectileRadius, b.z, projectileRadius, PROJECTILE_SIZE)) {
           b.dead = true;
           break;
         }
         for (const p of this.active())
           if (
             p.role === "hider" &&
-            Math.abs(p.x - b.x) < 0.55 &&
-            Math.abs(p.z - b.z) < 0.55 &&
-            b.y > p.y &&
-            b.y < p.y + 1.9
+            Math.abs(p.x - b.x) < 0.39 + projectileRadius &&
+            Math.abs(p.z - b.z) < 0.39 + projectileRadius &&
+            b.y + projectileRadius > p.y &&
+            b.y - projectileRadius < p.y + 1.9
           ) {
             b.dead = true;
             if (p.effects.shield > this.time) delete p.effects.shield;

@@ -46,9 +46,10 @@ test("projectile infection, cooldown, shield and immediate converted throw", () 
     hs = g.active().filter((p) => p.role === "hider");
   g.map = { ...g.map, blocks: [{ x: 0, y: -0.5, z: 0, w: 64, h: 1, d: 64 }] };
   Object.assign(s, { x: 0, y: 0, z: 0 });
-  Object.assign(hs[0], { x: 0, y: 0, z: -3 });
+  Object.assign(hs[0], { x: 0.65, y: 0, z: -3 });
   Object.assign(hs[1], { x: 12, y: 0, z: 12 });
   assert(g.throw(s.id, { x: 0, y: 0, z: -1 }));
+  assert.equal(s.cooldown, g.time + 2);
   assert(!g.throw(s.id, { x: 0, y: 0, z: -1 }));
   for (let i = 0; i < 8; i++) g.tick(1 / 30);
   assert.equal(hs[0].role, "seeker");

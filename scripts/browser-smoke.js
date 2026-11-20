@@ -205,7 +205,7 @@ try {
   await seeker.waitForFunction(
     () =>
       window.testState.players.find((p) => p.id === window.testSocket.id)
-        .cooldown > 2,
+        .cooldown > 0,
   );
   assert.equal(await seeker.evaluate(() => window.testThrows.length), 1);
   await seeker.mouse.click(550, 375, { button: "right" });
@@ -224,7 +224,7 @@ try {
   await seeker.waitForFunction(
     () =>
       window.testState.players.find((p) => p.id === window.testSocket.id)
-        .cooldown > 2,
+        .cooldown > 0,
   );
   assert.equal(await seeker.evaluate(() => window.testThrows.length), 2);
   // Left click can open Settings while the Back to Game button restores lock.

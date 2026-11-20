@@ -1,3 +1,4 @@
+import { PROJECTILE_SIZE } from "/shared/projectile.js";
 import * as THREE from "three";
 import { createMap, solid } from "/shared/maps.js";
 import { HUNTER_BURST_SECONDS, HUNTER_POWER_UPS } from "/shared/hunter.js";
@@ -257,7 +258,7 @@ function renderItems() {
     items.add(light);
   }
   for (const b of state.projectiles)
-    cube(items, b.x, b.y, b.z, 0.32, 0.32, 0.32, "#ff795e");
+    cube(items, b.x, b.y, b.z, PROJECTILE_SIZE, PROJECTILE_SIZE, PROJECTILE_SIZE, "#ff795e");
   for (const d of state.decoys) {
     const g = player({ ...d, role: "hider" });
     actors.remove(g);
