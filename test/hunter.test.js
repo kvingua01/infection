@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Game } from "../shared/game.js";
 
-function setup() {
-  const game = new Game({ random: () => 0.4, hide: 0, hunterSpawnChance: 0 });
+function setup(options = { hunterSpawnChance: 0 }) {
+  const game = new Game({ random: () => 0.4, hide: 0, ...options });
   for (const id of ["a", "b", "c", "d"]) game.join(id, id);
   game.tick(0);
   const seeker = game.active().find((p) => p.role === "seeker");
@@ -11,12 +11,11 @@ function setup() {
   return { game, seeker, hiders };
 }
 
-test("hunter spawn rolls are one in ten, have equal types, and stop at one cube", () => {
-  const { game } = setup();
-  game.hunterSpawnChance = 0.1;
+test("hunter spawn rolls default to one in eight, have equal types, and stop at one cube", () => {
+  const { game } = setup({});
   for (const player of game.active()) Object.assign(player, { x: 30, z: 30 });
-  for (let i = 0; i < 10; i++) {
-    game.random = () => 0.05 + i / 10;
+  for (let i = 0; i < 8; i++) {
+    game.random = () => 0.124 + i / 8;
     game.spawnAt = game.time;
     game.tick(0);
     assert.equal(game.pickups.length, i + 2);
@@ -24,7 +23,7 @@ test("hunter spawn rolls are one in ten, have equal types, and stop at one cube"
     game.hunterPickup = null;
   }
   for (const [roll, type] of [[0.16, "vision"], [0.5, "disruptor"], [0.84, "nullifier"]]) {
-    const draws = [0.4, 0.4, 0.09, 0.4, roll];
+    const draws = [0.4, 0.4, 0.12, 0.4, roll];
     game.random = () => draws.shift();
     game.spawnAt = game.time;
     game.tick(0);

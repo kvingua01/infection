@@ -22,7 +22,7 @@ export class Game {
     round = 300,
     intermission = 10,
     autoStart = true,
-    hunterSpawnChance = 0.1,
+    hunterSpawnChance = 0.125,
   } = {}) {
     this.random = random;
     this.autoStart = autoStart;
