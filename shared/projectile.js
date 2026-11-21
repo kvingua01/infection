@@ -1,5 +1,5 @@
 export const PROJECTILE_SIZE = 0.64;
-export const PROJECTILE_COOLDOWN = 2;
+export const PROJECTILE_COOLDOWN = 1;
 export const PROJECTILE_SPEED = 48;
 
 const boxAxes = [["x", "w"], ["y", "h"], ["z", "d"]];

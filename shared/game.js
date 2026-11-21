@@ -18,7 +18,7 @@ export class Game {
   constructor({
     random = Math.random,
     hide = 30,
-    round = 300,
+    round = 180,
     intermission = 10,
     autoStart = true,
     hunterSpawnChance = 0.125,

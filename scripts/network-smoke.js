@@ -65,11 +65,11 @@ try {
   const roster = await wait(late, () => true);
   assert.equal(roster.scoreboard.length, 12);
   const release = await wait(seeker, (s) => s.phase === "playing");
-  assert(release.remaining > 298 && release.remaining <= 300);
+  assert(release.remaining > 178 && release.remaining <= 180);
   assert.equal(release.players.filter((p) => p.role === "seeker").length, 1);
   assert.notEqual(release.players.find((p) => p.id === seeker.id).x, 45);
   console.log(
-    "PASS: twelve independent clients, one seeker, isolation privacy, blocked early throws, late arrival, 30-second release and 5-minute timer.",
+    "PASS: twelve independent clients, one seeker, isolation privacy, blocked early throws, late arrival, 30-second release and 3-minute timer.",
   );
 } finally {
   for (const c of clients) c.disconnect();

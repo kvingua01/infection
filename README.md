@@ -34,7 +34,7 @@ After joining a lobby, wait for the host to start, then click the world to captu
 | F                 | Use selected power-up                   |
 | Hold Tab          | Scoreboard                              |
 
-Each round chooses one of six block-built maps and one original seeker. Hiders get 30 seconds to hide while the seeker is confined in an enclosed isolation room. The server omits other player positions from the isolated seeker's updates. The hunt lasts five minutes. A projectile hit converts a hider into a seeker. Throws have a two-second cooldown. Converted seekers can throw immediately. Catch every hider to win as seekers; survive the timer to win as hiders. A ten-second intermission resets the map, roles, inventory and effects. Late arrivals and refreshed/reconnected browsers wait for the next round.
+Each round chooses one of six block-built maps and one original seeker. Hiders get 30 seconds to hide while the seeker is confined in an enclosed isolation room. The server omits other player positions from the isolated seeker's updates. The hunt lasts three minutes. A projectile hit converts a hider into a seeker. Throws have a one-second cooldown. Converted seekers can throw immediately. Catch every hider to win as seekers; survive the timer to win as hiders. A ten-second intermission resets the map, roles, inventory and effects. Late arrivals and refreshed/reconnected browsers wait for the next round.
 
 Hiders move at 3 blocks per second, half the seekers’ 6 blocks per second. A speed boost temporarily raises a hider to 6 blocks per second. Each map includes eight additional sheltered hiding spots with front and side escape routes.
 
@@ -90,7 +90,7 @@ Development verification performed: Node suite; local HTTP health/static endpoin
 - `public/client.js`: rendering, input, interpolation, camera collision and HUD.
 - `test/`: deterministic game-logic tests.
 
-Add maps in `createMap`; add power names in `TYPES`, server activation behavior in `Game.use`, and presentation colors in the client. Durations can be injected when creating `Game` for tests; production uses the requested 30/300/10-second timing.
+Add maps in `createMap`; add power names in `TYPES`, server activation behavior in `Game.use`, and presentation colors in the client. Durations can be injected when creating `Game` for tests; production uses the requested 30/180/10-second timing.
 
 ## Current scope and limitations
 

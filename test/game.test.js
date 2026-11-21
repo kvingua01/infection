@@ -26,7 +26,7 @@ test("one seeker, 30-second isolation, private snapshots, late joins and release
   assert.equal(g.players.get("late").role, "waiting");
   g.tick(30);
   assert.equal(g.phase, "playing");
-  assert.equal(g.until - g.time, 300);
+  assert.equal(g.until - g.time, 180);
   assert.notEqual(seeker.x, 45);
 });
 test("server ignores coordinates, bounds input and blocks walls", () => {
@@ -49,7 +49,7 @@ test("projectile infection, cooldown and immediate converted throw", () => {
   Object.assign(hs[0], { x: 0.65, y: 0, z: -3 });
   Object.assign(hs[1], { x: 12, y: 0, z: 12 });
   assert(g.throw(s.id, { x: 0, y: 0, z: -1 }));
-  assert.equal(s.cooldown, g.time + 2);
+  assert.equal(s.cooldown, g.time + 1);
   assert(!g.throw(s.id, { x: 0, y: 0, z: -1 }));
   for (let i = 0; i < 8; i++) g.tick(1 / 30);
   assert.equal(hs[0].role, "seeker");
@@ -136,7 +136,7 @@ test("six maps have safe spawns, boundary collision and elevated geometry", () =
 test("timer victory, intermission and automatic round reset", () => {
   const g = setup();
   g.tick(30);
-  g.tick(300);
+  g.tick(180);
   assert.equal(g.result, "HIDERS WIN");
   assert.equal(g.phase, "intermission");
   g.join("late", "Late");
