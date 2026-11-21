@@ -271,3 +271,30 @@ test("each map adds eight usable shelters with front and side escape routes", ()
     }
   }
 });
+
+test("the basement and cave passages are walkable in both directions", () => {
+  for (const index of [0, 2]) {
+    const g = setup();
+    const hider = g.active().find((p) => p.role === "hider");
+    g.map = createMap(index);
+    Object.assign(hider, { x: 20, y: 0, z: 29, vy: 0 });
+    const walk = (axis, target) => {
+      for (let frame = 0; frame < 600 && Math.abs(hider[axis] - target) > 0.11; frame++) {
+        g.input(hider.id, { [axis]: Math.sign(target - hider[axis]) });
+        g.tick(1 / 30);
+      }
+      assert(Math.abs(hider[axis] - target) < 0.11, `${g.map.name}: reach ${axis}=${target}`);
+    };
+    walk("z", 21);
+    walk("x", -8);
+    assert(hider.y < -3.5);
+    walk("z", -30.7);
+    assert(Math.abs(hider.y) < 0.1, "north exit reaches ground level");
+    walk("z", 21);
+    assert(hider.y < -3.5);
+    walk("x", 20);
+    walk("z", 29);
+    assert(Math.abs(hider.y) < 0.1, "south entrance also works as an exit");
+    assert(!solid(g.map, hider.x, hider.y, hider.z));
+  }
+});

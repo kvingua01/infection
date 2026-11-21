@@ -207,34 +207,38 @@ export function createMap(index) {
       box(-24 + n * 2.5, 1.6, -19.2, 1, 0.6, 0.1, "#293e58");
     }
   }
-  // Walkable below-ground rooms, with a staircase connecting to the arena.
+  // Below-ground routes connect south and north staircases.
   if (index === 0 || index === 2) {
     blocks.shift();
     const ground = ["#749965", "#c1b695", "#527b44"][index];
-    box(-7, -0.5, 0, 50, 1, 64, ground);
+    // Leave a four-block-wide opening above the north staircase.
+    box(-21, -0.5, 0, 22, 1, 64, ground);
+    box(6, -0.5, 0, 24, 1, 64, ground);
+    box(-8, -0.5, -31, 4, 1, 2, ground);
+    box(-8, -0.5, 6, 4, 1, 52, ground);
     box(27, -0.5, 0, 10, 1, 64, ground);
     box(20, -0.5, -6, 4, 1, 52, ground);
     box(20, -0.5, 30, 4, 1, 4, ground);
     box(20, -4.5, 24, 4, 1, 8, "#74777c");
-    for (let n = 0; n < 10; n++)
-      box(20, -4 + (n * 0.4) / 2, 20 + n * 0.8, 4, n * 0.4, 0.8, "#8b9195");
+    for (let n = 1; n < 10; n++)
+      box(20, -4 + n * 0.2, 20.8 + n * 0.8, 4, n * 0.4, 0.8, "#8b9195");
     box(17.75, -2, 25, 0.5, 4, 6, "#767b83");
     box(22.25, -2, 24, 0.5, 4, 8, "#767b83");
     box(20, -2, 19.75, 4, 4, 0.5, "#767b83");
     box(4, -4.5, 21, 32, 1, 3, "#757b80");
-    box(4, -2.5, 19.25, 32, 3, 0.5, "#65717c");
-    box(4, -2.5, 22.75, 32, 3, 0.5, "#65717c");
-    box(-12, -2.5, 21, 0.5, 3, 4, "#65717c");
-    box(-8, -4.5, 15, 4, 1, 12, "#757b80");
-    box(-10.25, -2.5, 15, 0.5, 3, 12, "#65717c");
-    box(-5.75, -2.5, 15, 0.5, 3, 12, "#65717c");
-    box(-8, -2.5, 8.75, 5, 3, 0.5, "#65717c");
-    // A gap in the tunnel's inner wall joins the secret branch.
-    const tunnelWall = blocks.findIndex((b) => b.x === 4 && b.z === 19.25);
-    blocks.splice(tunnelWall, 1);
+    // Leave a gap in the inner wall for the north passage.
     box(-11, -2.5, 19.25, 2, 3, 0.5, "#65717c");
     box(7, -2.5, 19.25, 26, 3, 0.5, "#65717c");
+    box(3, -2.5, 22.75, 30, 3, 0.5, "#65717c");
+    box(-12, -2.5, 21, 0.5, 3, 4, "#65717c");
+    box(-8, -4.5, -4.5, 4, 1, 51, "#757b80");
+    for (const x of [-10.25, -5.75])
+      box(x, -2, -4.75, 0.5, 4, 50.5, "#65717c");
+    for (let n = 1; n <= 10; n++)
+      box(-8, -4 + n * 0.2, -19.5 - n, 4, n * 0.4, 1, "#8b9195");
     label(index === 0 ? "BASEMENT STAIRS" : "CAVE DESCENT", 20, 2, 29);
+    label("NORTH EXIT", -8, -1.8, -18);
+    label(index === 0 ? "BASEMENT EXIT" : "CAVE EXIT", -8, 2, -30);
   }
   // Add sheltered, human-sized cover in unused floor space. Keep existing
   // stairs, doorways, tunnels and furniture clear; every shelter has two exits.
