@@ -15,6 +15,9 @@ test("one seeker, 30-second isolation, private snapshots, late joins and release
     hider = g.active().find((p) => p.role === "hider");
   assert.equal(g.active().filter((p) => p.role === "seeker").length, 1);
   assert.equal(seeker.x, 45);
+  assert.deepEqual(seeker.inventory, []);
+  assert.equal(hider.inventory.length, 1);
+  assert(TYPES.includes(hider.inventory[0]));
   assert.equal(g.snapshot(seeker.id).players.length, 1);
   assert.equal(g.throw(seeker.id, { x: 1, y: 0, z: 0 }), false);
   const before = hider.x;
@@ -99,6 +102,7 @@ test("inventory capacity and all seven effects", () => {
       h = g.active().find((p) => p.role === "hider"),
       s = g.active().find((p) => p.role === "seeker");
     Object.assign(h, g.map.release);
+    h.inventory = [];
     g.pickups = [0, 1, 2].map((id) => ({ id, ...g.map.release, type }));
     g.tick(0.01);
     g.tick(0.01);
@@ -143,7 +147,10 @@ test("timer victory, intermission and automatic round reset", () => {
   g.tick(10);
   assert.equal(g.phase, "hiding");
   assert.equal(g.players.get("late").role, "hider");
-  for (const p of g.active()) assert.equal(p.inventory.length, 0);
+  for (const p of g.active()) {
+    assert.equal(p.inventory.length, p.role === "hider" ? 1 : 0);
+    assert(p.inventory.every((type) => TYPES.includes(type)));
+  }
   g.tick(30);
   for (const p of g.active()) if (p.role === "hider") g.convert(p);
   g.check();

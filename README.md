@@ -38,7 +38,7 @@ Each round chooses one of six block-built maps and one original seeker. Hiders g
 
 Hiders move at 3 blocks per second, half the seekers’ 6 blocks per second. A speed boost temporarily raises a hider to 6 blocks per second. Each map includes eight additional sheltered hiding spots with front and side escape routes.
 
-Hiders automatically collect nearby floating cubes, up to two. Seven powers: invisibility (12s), double speed (15s), safe teleport, moving decoy (15s), nearby seeker freeze (5s, 12-block radius), super jump (20s), and smoke (10s). Powers spawn every four seconds with a 24-cube limit. Seekers do not receive invisible hiders' transforms or world nicknames. Invisibility does not protect against a projectile that happens to hit.
+Hiders start each round with one random power-up and can carry up to two by collecting nearby floating cubes. Seven powers: invisibility (12s), double speed (15s), safe teleport, moving decoy (15s), nearby seeker freeze (5s, 12-block radius), super jump (20s), and smoke (10s). Powers spawn every four seconds with a 24-cube limit. Seekers do not receive invisible hiders' transforms or world nicknames. Invisibility does not protect against a projectile that happens to hit.
 
 ## Deploy to Railway
 

@@ -95,23 +95,24 @@ function cube(parent, x, y, z, w, h, d, color) {
   parent.add(mesh);
   return mesh;
 }
-function textSprite(text) {
+function textSprite(text, nameTag = false) {
   const c = document.createElement("canvas");
-  c.width = 512;
+  c.width = nameTag ? 256 : 512;
   c.height = 64;
   const ctx = c.getContext("2d");
   ctx.fillStyle = "#162638dd";
-  ctx.fillRect(0, 0, 512, 64);
+  ctx.fillRect(0, 0, c.width, c.height);
   ctx.font = "bold 28px sans-serif";
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "center";
-  ctx.fillText(text, 256, 42);
+  ctx.fillText(text, c.width / 2, 42, c.width - 12);
   const mat = new THREE.SpriteMaterial({
     map: new THREE.CanvasTexture(c),
     depthTest: true,
   });
   const s = new THREE.Sprite(mat);
-  s.scale.set(3.5, 0.44, 1);
+  if (nameTag) s.scale.set(0.48, 0.12, 1);
+  else s.scale.set(3.5, 0.44, 1);
   return s;
 }
 function disposeObject(object) {
@@ -128,12 +129,15 @@ function clear(group) {
     disposeObject(c);
   }
 }
+let worldMeshes = [];
 function loadMap(index) {
   mapIndex = index;
   map = createMap(index);
   clear(world);
-  for (const b of map.blocks)
-    cube(world, b.x, b.y, b.z, b.w, b.h, b.d, b.color);
+  worldMeshes = map.blocks.map((b) =>
+    cube(world, b.x, b.y, b.z, b.w, b.h, b.d, b.color),
+  );
+  world.updateMatrixWorld(true);
   for (const l of map.labels) {
     const t = textSprite(l.text);
     t.position.set(l.x, l.y, l.z);
@@ -151,8 +155,8 @@ function player(p) {
   cube(group, 0.46, 1, 0, 0.22, 0.7, 0.25, skin);
   cube(group, -0.13, 1.66, -0.273, 0.08, 0.08, 0.02, 0x162638);
   cube(group, 0.13, 1.66, -0.273, 0.08, 0.08, 0.02, 0x162638);
-  const tag = textSprite(p.name);
-  tag.position.y = 2.2;
+  const tag = textSprite(p.name, true);
+  tag.position.y = 1.96;
   group.add(tag);
   group.traverse((c) => {
     if (c.isMesh) {
@@ -160,7 +164,7 @@ function player(p) {
       c.userData.ownedMaterial = true;
     }
   });
-  group.userData = { role: p.role };
+  group.userData = { role: p.role, nameTag: tag };
   group.position.set(p.x, p.y, p.z);
   actors.add(group);
   return group;
@@ -716,7 +720,7 @@ function throwProjectile() {
   camera.updateMatrixWorld();
   const ray = new THREE.Raycaster();
   ray.setFromCamera(new THREE.Vector2(0, 0), camera);
-  const targets = world.children.filter((o) => o.isMesh);
+  const targets = [...worldMeshes];
   for (const model of models.values()) {
     if (!model.visible || model.userData.role !== "hider") continue;
     model.updateWorldMatrix(true, true);
@@ -925,6 +929,20 @@ function updateGamepad(now, dt) {
   }
   return pressed.includes(buttons.throw);
 }
+const nameRay = new THREE.Raycaster();
+const toHead = new THREE.Vector3();
+function updateNameTags(group) {
+  for (const actor of group.children) {
+    const tag = actor.userData.nameTag;
+    if (!tag || !actor.visible) continue;
+    toHead.copy(actor.position).sub(camera.position);
+    toHead.y += 1.6;
+    nameRay.far = toHead.length();
+    nameRay.set(camera.position, toHead.normalize());
+    // The label alone should never reveal a head hidden behind the map.
+    tag.visible = nameRay.intersectObjects(worldMeshes, false).length === 0;
+  }
+}
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - last) / 1000, 0.1);
@@ -1006,6 +1024,8 @@ function frame(now) {
         Math.sin(angle) * 0.68);
     }
   }
+  updateNameTags(actors);
+  updateNameTags(items);
   if (controllerThrow) throwProjectile();
   renderer.render(scene, camera);
 }

@@ -46,7 +46,8 @@ test("hunter pickup validates distance, role, capacity and round end", () => {
   game.tick(0);
   assert.equal(seeker.hunterItem, null);
   assert.equal(hider.hunterItem, null);
-  assert.equal(game.use(hider.id, 0), false);
+  assert.equal(hider.inventory.length, 1);
+  assert.equal(game.use(hider.id, 1), false);
   Object.assign(seeker, position);
   game.tick(0);
   assert.equal(seeker.hunterItem, "vision");
@@ -100,6 +101,7 @@ test("disruptor removes one unused item per hider and preserves active effects",
   game.random = () => 0.7;
   two.inventory = ["teleport", "jump"];
   one.inventory = ["decoy"];
+  empty.inventory = [];
   two.effects.speed = 10;
   seeker.hunterItem = "disruptor";
   assert(game.use(seeker.id, 0));

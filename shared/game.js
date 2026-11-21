@@ -123,6 +123,8 @@ export class Game {
       });
     const seeker = this.pick(this.active());
     seeker.role = "seeker";
+    for (const p of this.players.values())
+      if (p.role === "hider") p.inventory.push(this.pick(TYPES));
     Object.assign(seeker, { x: 45, y: 0, z: 0 });
     this.original = seeker.id;
     this.spawnAt = this.time;
