@@ -67,7 +67,7 @@ test("games isolate positions, inventories, clocks, projectiles and scores", () 
   m.start("a");
   m.start("b");
   assert.notEqual(a.game, b.game);
-  a.game.players.get("a").inventory = ["shield"];
+  a.game.players.get("a").inventory = ["teleport"];
   a.game.players.get("a").score = 4;
   a.game.players.get("a").x = 20;
   a.game.time = 50;

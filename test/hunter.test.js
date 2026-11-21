@@ -98,12 +98,12 @@ test("disruptor removes one unused item per hider and preserves active effects",
   const otherRoom = setup();
   otherRoom.hiders[0].inventory = ["speed"];
   game.random = () => 0.7;
-  two.inventory = ["shield", "jump"];
+  two.inventory = ["teleport", "jump"];
   one.inventory = ["decoy"];
   two.effects.speed = 10;
   seeker.hunterItem = "disruptor";
   assert(game.use(seeker.id, 0));
-  assert.deepEqual(two.inventory, ["shield"]);
+  assert.deepEqual(two.inventory, ["teleport"]);
   assert.deepEqual(one.inventory, []);
   assert.equal(two.effects.speed, 10);
   assert.deepEqual(otherRoom.hiders[0].inventory, ["speed"]);
@@ -113,19 +113,19 @@ test("disruptor removes one unused item per hider and preserves active effects",
   assert.equal(empty.hunterNotice, null);
 });
 
-test("nullifier clears shields, expires or shortens buffs and preserves carried items", () => {
+test("nullifier expires or shortens buffs and preserves carried items", () => {
   const { game, seeker, hiders: [hider] } = setup();
   const otherRoom = setup();
   game.time = 50;
-  hider.inventory = ["shield", "speed"];
-  hider.effects = { shield: 100, invisibility: 75, speed: 62, jump: 70 };
+  hider.inventory = ["teleport", "speed"];
+  hider.effects = { invisibility: 75, speed: 62, jump: 70 };
   seeker.effects.freeze = 55;
-  otherRoom.hiders[0].effects.shield = 100;
+  otherRoom.hiders[0].effects.speed = 100;
   seeker.hunterItem = "nullifier";
   assert(game.use(seeker.id, 0));
   assert.deepEqual(hider.effects, { invisibility: 60, jump: 55 });
-  assert.deepEqual(hider.inventory, ["shield", "speed"]);
+  assert.deepEqual(hider.inventory, ["teleport", "speed"]);
   assert.equal(seeker.effects.freeze, 55);
-  assert.equal(otherRoom.hiders[0].effects.shield, 100);
+  assert.equal(otherRoom.hiders[0].effects.speed, 100);
   assert.equal(hider.hunterNotice.text, "A hunter weakened your active power-ups!");
 });

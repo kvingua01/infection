@@ -171,7 +171,6 @@ const colors = {
   teleport: "#64d6e3",
   decoy: "#ed9bd7",
   freeze: "#94d8ff",
-  shield: "#8dadff",
   jump: "#b8ed79",
   smoke: "#bdc2d0",
 };
@@ -717,10 +716,13 @@ function throwProjectile() {
   camera.updateMatrixWorld();
   const ray = new THREE.Raycaster();
   ray.setFromCamera(new THREE.Vector2(0, 0), camera);
-  const hit = ray.intersectObjects(
-    world.children.filter((o) => o.isMesh),
-    false,
-  )[0];
+  const targets = world.children.filter((o) => o.isMesh);
+  for (const model of models.values()) {
+    if (!model.visible || model.userData.role !== "hider") continue;
+    model.updateWorldMatrix(true, true);
+    targets.push(...model.children.filter((o) => o.isMesh));
+  }
+  const hit = ray.intersectObjects(targets, false)[0];
   const aim = hit ? hit.point : ray.ray.at(100, new THREE.Vector3());
   const direction = aim
     .clone()

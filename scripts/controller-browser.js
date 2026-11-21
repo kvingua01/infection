@@ -144,10 +144,10 @@ try {
   // The same controller bindings route hider slot selection and use.
   hunter.role = "hider";
   hider.role = "seeker";
-  hunter.inventory = ["invisibility", "shield"];
+  hunter.inventory = ["invisibility", "jump"];
   await press(15);
   await press(0);
-  await serverUntil(() => hunter.effects.shield > game.time);
+  await serverUntil(() => hunter.effects.jump > game.time);
   assert.deepEqual(hunter.inventory, ["invisibility"]);
 
   await sample({ id: null });

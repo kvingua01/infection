@@ -39,7 +39,7 @@ test("server ignores coordinates, bounds input and blocks walls", () => {
   assert(p.x >= 30);
   assert(p.y < 0.1);
 });
-test("projectile infection, cooldown, shield and immediate converted throw", () => {
+test("projectile infection, cooldown and immediate converted throw", () => {
   const g = setup();
   g.tick(30);
   const s = g.active().find((p) => p.role === "seeker"),
@@ -56,12 +56,26 @@ test("projectile infection, cooldown, shield and immediate converted throw", () 
   assert(g.throw(hs[0].id, { x: 1, y: 0, z: 0 }));
   g.projectiles = [];
   Object.assign(hs[1], { x: 0, y: 0, z: -3 });
-  hs[1].effects.shield = g.time + 100;
   s.cooldown = 0;
   g.throw(s.id, { x: 0, y: 0, z: -1 });
   for (let i = 0; i < 8; i++) g.tick(1 / 30);
-  assert.equal(hs[1].role, "hider");
-  assert(!hs[1].effects.shield);
+  assert.equal(hs[1].role, "seeker");
+});
+test("fast projectiles sweep through an entire tick, including the avatar arms", () => {
+  const g = setup();
+  g.tick(30);
+  const seeker = g.active().find((p) => p.role === "seeker");
+  const hider = g.active().find((p) => p.role === "hider");
+  g.map.blocks = [{ x: 0, y: -0.5, z: 0, w: 64, h: 1, d: 64 }];
+  Object.assign(seeker, { x: 0, y: 0, z: 0 });
+  Object.assign(hider, { x: 0.84, y: 0, z: -7, yaw: 0 });
+  assert(g.throw(seeker.id, { x: 0, y: 0, z: -1 }));
+  g.tick(0.0625);
+  assert.equal(g.projectiles[0].z, -3);
+  g.tick(0.125);
+  assert.equal(hider.role, "seeker");
+  assert.equal(seeker.caught, 1);
+  assert.equal(g.projectiles.length, 0);
 });
 test("projectiles stop at walls", () => {
   const g = setup();
@@ -70,13 +84,16 @@ test("projectiles stop at walls", () => {
     h = g.active().find((p) => p.role === "hider");
   Object.assign(s, { x: 0, y: 0, z: 0 });
   Object.assign(h, { x: 0, y: 0, z: -4 });
-  g.map.blocks.push({ x: 0, y: 1, z: -2, w: 4, h: 3, d: 0.5 });
+  g.map.blocks = [
+    { x: 0, y: -0.5, z: 0, w: 64, h: 1, d: 64 },
+    { x: 0, y: 1, z: -2, w: 4, h: 3, d: 0.05 },
+  ];
   g.throw(s.id, { x: 0, y: 0, z: -1 });
-  for (let n = 0; n < 12; n++) g.tick(1 / 30);
+  g.tick(0.125);
   assert.equal(h.role, "hider");
   assert.equal(g.projectiles.length, 0);
 });
-test("inventory capacity and all eight effects", () => {
+test("inventory capacity and all seven effects", () => {
   for (const type of TYPES) {
     const g = setup(),
       h = g.active().find((p) => p.role === "hider"),
@@ -99,7 +116,6 @@ test("inventory capacity and all eight effects", () => {
     if (type === "teleport") assert(!solid(g.map, h.x, h.y, h.z));
     if (type === "decoy") assert.equal(g.decoys.length, 1);
     if (type === "freeze") assert(s.effects.freeze > g.time);
-    if (type === "shield") assert(h.effects.shield > g.time);
     if (type === "jump") assert(h.effects.jump > g.time);
     if (type === "smoke") assert.equal(g.smoke.length, 1);
     g.convert(h);
@@ -198,7 +214,8 @@ test("invisibility actually filters active seekers, preserves self, and expires"
   g.use(h.id, 0);
   assert(!g.snapshot(s.id).players.some((p) => p.id === h.id));
   assert(g.snapshot(h.id).players.some((p) => p.id === h.id));
-  for (let n = 0; n < 901; n++) g.tick(1 / 30);
+  assert.equal(h.effects.invisibility, g.time + 12);
+  for (let n = 0; n < 361; n++) g.tick(1 / 30);
   assert(g.snapshot(s.id).players.some((p) => p.id === h.id));
 });
 test("decoys move and decoy/smoke lifetimes are enforced", () => {

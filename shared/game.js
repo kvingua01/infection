@@ -1,4 +1,4 @@
-import { PROJECTILE_SIZE, PROJECTILE_COOLDOWN } from "./projectile.js";
+import { PROJECTILE_SPEED, PROJECTILE_COOLDOWN, projectileHitTime } from "./projectile.js";
 import { createMap, solid } from "./maps.js";
 import { HUNTER_BURST_SECONDS, HUNTER_POWER_UPS } from "./hunter.js";
 
@@ -11,7 +11,6 @@ export const TYPES = [
   "teleport",
   "decoy",
   "freeze",
-  "shield",
   "jump",
   "smoke",
 ];
@@ -180,14 +179,14 @@ export class Game {
       p.role !== "hider" ||
       !["playing", "hiding"].includes(this.phase) ||
       ![0, 1].includes(slot) ||
-      !p.inventory[slot]
+      !TYPES.includes(p.inventory[slot])
     )
       return false;
     const type = p.inventory.splice(slot, 1)[0],
       t = this.time;
     switch (type) {
       case "invisibility":
-        p.effects.invisibility = t + 30;
+        p.effects.invisibility = t + 12;
         break;
       case "speed":
         p.effects.speed = t + 15;
@@ -211,9 +210,6 @@ export class Game {
         for (const s of this.active())
           if (s.role === "seeker" && Math.hypot(s.x - p.x, s.z - p.z) < 12)
             s.effects.freeze = t + 5;
-        break;
-      case "shield":
-        p.effects.shield = t + 3600;
         break;
       case "jump":
         p.effects.jump = t + 20;
@@ -258,7 +254,6 @@ export class Game {
         hider.inventory.splice(Math.floor(this.random() * hider.inventory.length), 1);
         this.notifyHunter(hider, "A hunter destroyed one of your power-ups!");
       } else {
-        delete hider.effects.shield;
         for (const [buff, expires] of Object.entries(hider.effects)) {
           const shortened = expires - 15;
           if (shortened <= this.time) delete hider.effects[buff];
@@ -386,39 +381,45 @@ export class Game {
           type: this.pick(hunterTypes),
         };
     }
-    const projectileRadius = PROJECTILE_SIZE / 2;
-    for (const b of this.projectiles) {
-      const steps = Math.ceil((24 * dt) / 0.15);
-      for (let n = 0; n < steps && !b.dead; n++) {
-        b.x += (b.dx * 24 * dt) / steps;
-        b.y += (b.dy * 24 * dt) / steps;
-        b.z += (b.dz * 24 * dt) / steps;
-        if (solid(this.map, b.x, b.y - projectileRadius, b.z, projectileRadius, PROJECTILE_SIZE)) {
-          b.dead = true;
-          break;
+    const hiders = this.active().filter((p) => p.role === "hider").map((p) => {
+      // The block avatar spans 1.14 units across the arms and 1.865 vertically.
+      const sin = Math.abs(Math.sin(p.yaw));
+      const cos = Math.abs(Math.cos(p.yaw));
+      const height = 1.865;
+      return { player: p, box: {
+        x: p.x, y: p.y + height / 2, z: p.z,
+        w: 1.14 * cos + 0.566 * sin, h: height,
+        d: 1.14 * sin + 0.566 * cos,
+      } };
+    });
+    this.projectiles = this.projectiles.filter((b) => {
+      const flight = Math.min(dt, Math.max(0, b.expires - (this.time - dt)));
+      if (!flight) return b.expires > this.time;
+      const distance = flight * PROJECTILE_SPEED;
+      const travel = { x: b.dx * distance, y: b.dy * distance, z: b.dz * distance };
+      let impact = Infinity;
+      for (const block of this.map.blocks)
+        impact = Math.min(impact, projectileHitTime(b, travel, block, Math.min(1, impact)));
+      let target;
+      for (const { player, box } of hiders) {
+        if (player.role !== "hider") continue;
+        const hit = projectileHitTime(b, travel, box, Math.min(1, impact));
+        if (hit < impact) {
+          impact = hit;
+          target = player;
         }
-        for (const p of this.active())
-          if (
-            p.role === "hider" &&
-            Math.abs(p.x - b.x) < 0.39 + projectileRadius &&
-            Math.abs(p.z - b.z) < 0.39 + projectileRadius &&
-            b.y + projectileRadius > p.y &&
-            b.y - projectileRadius < p.y + 1.9
-          ) {
-            b.dead = true;
-            if (p.effects.shield > this.time) delete p.effects.shield;
-            else {
-              this.convert(p);
-              const owner = this.players.get(b.owner);
-              if (owner) owner.caught++;
-            }
-            break;
-          }
       }
-    }
-    this.projectiles = this.projectiles.filter(
-      (b) => !b.dead && b.expires > this.time,
-    );
+      if (target) {
+        this.convert(target);
+        const owner = this.players.get(b.owner);
+        if (owner) owner.caught++;
+      }
+      if (impact !== Infinity || b.expires <= this.time) return false;
+      b.x += travel.x;
+      b.y += travel.y;
+      b.z += travel.z;
+      return true;
+    });
     for (const d of this.decoys) {
       const dx = Math.sin(d.yaw) * dt * 3,
         dz = Math.cos(d.yaw) * dt * 3;
@@ -477,7 +478,7 @@ export class Game {
         effects:
           p.id === id
             ? p.effects
-            : { shield: p.effects.shield, freeze: p.effects.freeze },
+            : { freeze: p.effects.freeze },
         ...(p.id === id
           ? {
               inventory: p.inventory,
