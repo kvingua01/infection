@@ -98,6 +98,7 @@
             Use the D-pad or left stick to navigate.
           </p>
         </details>
+        <button id="openGuide" type="button">Advanced Instructions</button>
       </div>
     </section>
     <section id="waitingRoom" class="overlay" hidden>
@@ -128,6 +129,61 @@
         <button id="leaveScores" type="button">Leave Lobby</button>
       </div>
     </section>
+    <dialog id="advancedGuide" class="card" aria-labelledby="guideTitle">
+      <div class="guide-header">
+        <h2 id="guideTitle">Advanced Instructions</h2>
+        <form method="dialog"><button type="submit">Back to Menu</button></form>
+      </div>
+      <article id="guideContent" tabindex="0" aria-label="Game guide">
+        <section>
+          <h3>Join a game</h3>
+          <p>Enter a nickname and create or browse a public lobby, or create a private lobby and share its six-character code with friends. The host can start when at least two players are in the lobby. Joining during a round puts you in the waiting room until the next round.</p>
+        </section>
+        <section>
+          <h3>How a round works</h3>
+          <p>One player starts as the seeker. Hiders have 30 seconds to find cover while the seeker is locked away. The hunt then lasts 3 minutes. A projectile hit turns a hider into a seeker who can throw immediately. Seekers win if they catch everyone. Hiders win if any hider survives until time runs out.</p>
+          <p>Use walls to break sightlines. The underground passages in Giant House and Forest &amp; Cabins have stairs on opposite sides of the map. Learn both exits before using them as hiding spots. Seekers can throw once per second, and walls stop their projectiles.</p>
+        </section>
+        <section>
+          <h3>Controls</h3>
+          <p><strong>Keyboard and mouse.</strong> Use WASD to move, Space to jump, and the mouse to aim. Click the world to capture the pointer. Left click throws as a seeker. Use 1 or 2 to select a hider inventory slot and F to use the selected power-up. V switches the camera and Esc opens Settings.</p>
+          <p><strong>Controller.</strong> Use the left stick to move and right stick to aim. Press A or Cross to jump, RT or R2 to throw, and X or Square to use a power-up. D-pad left and right select inventory slots. Menu or Options opens Settings. In menus, use the D-pad to move, A or Cross to select, and B or Circle to go back. Use the right stick to scroll this guide.</p>
+          <p>These are the defaults. Open Settings to view or change your bindings.</p>
+        </section>
+        <section>
+          <h3>Hider power-ups</h3>
+          <p>You start each round with one random power-up. Walk over glowing cubes to pick them up. You can hold two at a time. Select a slot, then use its power-up when you need it.</p>
+          <dl>
+            <dt>Invisibility · 12 seconds</dt>
+            <dd>Ordinary seeker vision cannot see you, but projectiles can still hit you and Hunter’s Vision can reveal you. Use it before crossing open ground.</dd>
+            <dt>Speed · 15 seconds</dt>
+            <dd>Doubles your hider movement speed. Use it to reach cover or put distance between you and a seeker.</dd>
+            <dt>Teleport · Instant</dt>
+            <dd>Moves you to a random safe spawn location. Useful when a seeker has cut off your escape route.</dd>
+            <dt>Decoy · 15 seconds</dt>
+            <dd>Creates a moving copy of your character at your position. Send it in one direction while you escape in another.</dd>
+            <dt>Freeze · 5 seconds</dt>
+            <dd>Stops nearby seekers within 12 blocks from moving or throwing. Use it when a seeker gets too close.</dd>
+            <dt>Super Jump · 20 seconds</dt>
+            <dd>Increases your jump height so you can reach ledges and cross obstacles more easily.</dd>
+            <dt>Smoke · 10 seconds</dt>
+            <dd>Creates a smoke cloud at your position that limits nearby seekers’ vision. Use the cover to change direction or move behind a wall.</dd>
+          </dl>
+        </section>
+        <section>
+          <h3>Hunter power-ups</h3>
+          <p>Rare red cubes are for seekers. There can be one red cube on the map at a time, and you can carry one in your hunter slot. Use the same power-up button to activate it.</p>
+          <dl>
+            <dt>Hunter’s Vision · 2 seconds</dt>
+            <dd>Marks every remaining hider through walls for all seekers in your lobby, even if a hider is invisible. Look for escape routes as well as positions.</dd>
+            <dt>Inventory Disruptor · Instant</dt>
+            <dd>Destroys one random unused power-up from each hider who is carrying one. Effects already in use keep running.</dd>
+            <dt>Power Nullifier · Instant</dt>
+            <dd>Subtracts 15 seconds from each active timed hider buff. A buff with 15 seconds or less remaining ends immediately. Carried items stay in inventory.</dd>
+          </dl>
+        </section>
+      </article>
+    </dialog>
     <dialog id="settings" class="card" aria-labelledby="settingsTitle">
       <h2 id="settingsTitle">Settings</h2>
       <div class="settings-actions">

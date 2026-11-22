@@ -656,6 +656,7 @@ const settings = createSettings({
   },
   onSave: updateControlLabels,
 });
+$("openGuide").onclick = () => $("advancedGuide").showModal();
 const controllerMenu = createControllerMenu({
   settings,
   controller,

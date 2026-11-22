@@ -67,6 +67,7 @@ test("games isolate positions, inventories, clocks, projectiles and scores", () 
   m.start("a");
   m.start("b");
   assert.notEqual(a.game, b.game);
+  const otherInventory = [...b.game.players.get("b").inventory];
   a.game.players.get("a").inventory = ["teleport"];
   a.game.players.get("a").score = 4;
   a.game.players.get("a").x = 20;
@@ -74,7 +75,7 @@ test("games isolate positions, inventories, clocks, projectiles and scores", () 
   assert.equal(b.game.time, 0);
   assert(!b.game.snapshot("b").players.some((p) => p.id === "a"));
   assert.equal(b.game.players.get("b").score, 0);
-  assert.deepEqual(b.game.players.get("b").inventory, []);
+  assert.deepEqual(b.game.players.get("b").inventory, otherInventory);
   assert.notEqual(a.game.projectiles, b.game.projectiles);
   assert.notEqual(a.game.pickups, b.game.pickups);
 });

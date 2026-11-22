@@ -56,6 +56,7 @@ export function createControllerMenu({ settings, controller, back }) {
 
   function root() {
     if (keyboard.open) return keyboard;
+    if ($("advancedGuide").open) return $("advancedGuide");
     if (settings.isOpen()) return $("settings");
     for (const id of ["join", "waitingRoom", "scores"]) {
       if (!$(id).hidden) return $(id);
@@ -100,9 +101,17 @@ export function createControllerMenu({ settings, controller, back }) {
       direction = null;
       return false;
     }
-    const { down, pressed, left } = sample;
+    const { down, pressed, left, right } = sample;
     if (!down) {
       direction = null;
+      return true;
+    }
+    if (scope.id === "advancedGuide") {
+      if (pressed.includes(0) || pressed.includes(1)) scope.close();
+      else {
+        const scroll = Number(down.has(13)) - Number(down.has(12));
+        $("guideContent").scrollTop += (scroll || left.y || right.y) * 12;
+      }
       return true;
     }
     if (scope === $("settings") && controller.captureButtons(pressed)) return true;

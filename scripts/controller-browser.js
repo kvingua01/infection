@@ -68,6 +68,16 @@ try {
   }
   await page.locator("#controllerBanner").waitFor({ state: "visible" });
   assert.match(await text("#controllerBanner"), /Controller Connected · A select/);
+  await highlight("openGuide");
+  await press(0);
+  await page.locator("#advancedGuide").waitFor({ state: "visible" });
+  assert.equal(await page.locator("#guideContent dt").count(), 10);
+  await sample({ axes: [0, 0, 0, 1] });
+  await wait(() => document.querySelector("#guideContent").scrollTop > 0);
+  await sample({ axes: [0, 0, 0, 0] });
+  await press(1);
+  await page.locator("#advancedGuide").waitFor({ state: "hidden" });
+  await highlight("nickname");
   // Only virtual controller input is used for the menu, text entry and first round.
   await press(0);
   await page.locator("#screenKeyboard").waitFor({ state: "visible" });

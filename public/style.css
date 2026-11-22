@@ -439,3 +439,51 @@ header {
   color: #c5ed80;
   pointer-events: none;
 }
+
+#advancedGuide {
+  width: min(680px, 94vw);
+  max-height: 88dvh;
+  padding: clamp(12px, 4vw, 28px);
+  color: inherit;
+}
+#advancedGuide[open] {
+  display: flex;
+  flex-direction: column;
+}
+#advancedGuide::backdrop {
+  background: #09111bd9;
+}
+.guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ffffff22;
+}
+.guide-header h2,
+.guide-header button {
+  margin: 0;
+}
+.guide-header button {
+  padding: 8px 12px;
+}
+#guideContent {
+  overflow: auto;
+  padding-right: 8px;
+}
+#guideContent h3 {
+  color: #c5ed80;
+  margin: 20px 0 4px;
+}
+#guideContent dt {
+  font-weight: 700;
+  padding-top: 8px;
+}
+#guideContent dd {
+  margin: 3px 0 10px;
+  color: #adbfca;
+  font-size: 13px;
+  line-height: 1.55;
+}
